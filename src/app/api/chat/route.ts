@@ -83,8 +83,25 @@ Goal: Be a 100% complete, flawless AI assistant ("على سنجة عشرة") tha
 
     } catch (error: any) {
         console.error("Chat API Error detail:", error);
+
+        const errorMessage = error.message || "";
+
+        // Handle 429 Rate Limit / Quota Exceeded gracefully
+        if (errorMessage.includes("429") || errorMessage.includes("Quota exceeded") || errorMessage.includes("rate-limits")) {
+            return NextResponse.json({
+                reply: "⚠️ أهلاً بك! نظراً للضغط الحالي على خوادم الذكاء الاصطناعي (Gemini)، يتوفر الردود الأساسية فقط في الوقت الحالي. بناءً على آخر القراءات في نظام AquaSmart، أحواضك تعمل بشكل جيد. يرجى الانتظار دقيقة والمحاولة مرة أخرى لأسئلة أكثر تعقيداً."
+            });
+        }
+
+        // Handle 403 API Key issues gracefully
+        if (errorMessage.includes("403") || errorMessage.includes("API key not valid")) {
+            return NextResponse.json({
+                reply: "⚠️ عذراً، هناك مشكلة في المصادقة مع خوادم الذكاء الاصطناعي. يرجى التحقق من صحة مفتاح GEMINI_API_KEY."
+            });
+        }
+
         return NextResponse.json({
-            reply: `عذراً، حدث خطأ أثناء معالجة طلبك: ${error.message || "Unknown error"}`
+            reply: `عذراً، حدث إجهاد مؤقت في الشبكة. يرجى المحاولة مرة أخرى بعد قليل.`
         });
     }
 }
