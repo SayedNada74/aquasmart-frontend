@@ -18,8 +18,8 @@ export async function POST(req: Request) {
         console.log("DEBUG: Using API Key starting with:", apiKey.substring(0, 8));
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Using gemini-2.5-flash based on API key permissions - excellent for multimodal
-        const modelName = "gemini-2.5-flash";
+        // Using gemini-1.5-flash based on API key permissions - generous free tier
+        const modelName = "gemini-1.5-flash";
         const model = genAI.getGenerativeModel({ model: modelName });
         console.log("DEBUG: Using model:", modelName);
 
