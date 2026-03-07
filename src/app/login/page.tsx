@@ -50,6 +50,7 @@ export default function LoginPage() {
     const [passwordError, setPasswordError] = useState("");
     const [nameError, setNameError] = useState("");
     const [success, setSuccess] = useState("");
+    const [isVerifyingEmail, setIsVerifyingEmail] = useState(false);
     const router = useRouter();
     const { t, lang, setLang, theme, setTheme } = useApp();
 
@@ -136,14 +137,8 @@ export default function LoginPage() {
                 // Sign out immediately until they verify
                 await signOut(auth);
 
-                setSuccess(t("تم إنشاء الحساب بنجاح! ✅ يرجى تفعيل حسابك من خلال الرابط المرسل لبريدك الإلكتروني قبل تسجيل الدخول.", "Account created successfully! ✅ Please verify your account via the link sent to your email before logging in."));
-
-                // Switch back to login view so they can login after verifying
-                setTimeout(() => {
-                    setIsLogin(true);
-                    setSuccess("");
-                    setPassword("");
-                }, 4000);
+                // Switch to the large email verification success screen
+                setIsVerifyingEmail(true);
             }
         } catch (err: any) {
             const code = err?.code || "";
@@ -236,125 +231,149 @@ export default function LoginPage() {
                         </button>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="w-full max-w-sm card mt-10">
-                        <h2 className="text-2xl font-bold text-[var(--color-text-primary)] text-center mb-2">
-                            {isLogin ? t("تسجيل الدخول", "Sign In") : t("إنشاء حساب جديد", "Create Account")}
-                        </h2>
-                        <p className="text-sm text-[var(--color-text-secondary)] text-center mb-8">
-                            {isLogin ? t("أهلاً بك مجدداً! يرجى إدخال بياناتك.", "Welcome back! Please enter your details.") : t("أنشئ حسابك واستمتع بإدارة مزرعتك.", "Create an account and manage your farm.")}
-                        </p>
-
-                        <div className="flex items-center justify-center gap-6 mb-8 border-b border-[var(--color-border)]">
-                            <button type="button" onClick={() => { setIsLogin(true); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
-                                className={`pb-3 text-sm font-medium transition-colors ${isLogin ? "text-[var(--color-cyan-dark)] border-b-2 border-[var(--color-cyan-dark)]" : "text-[var(--color-text-muted)]"}`}>
-                                {t("دخول", "Login")}
-                            </button>
-                            <button type="button" onClick={() => { setIsLogin(false); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
-                                className={`pb-3 text-sm font-medium transition-colors ${!isLogin ? "text-[var(--color-cyan-dark)] border-b-2 border-[var(--color-cyan-dark)]" : "text-[var(--color-text-muted)]"}`}>
-                                {t("إنشاء حساب", "Sign Up")}
+                    {isVerifyingEmail ? (
+                        <div className="w-full max-w-sm card mt-10 p-8 text-center flex flex-col items-center animate-in zoom-in-95 duration-500">
+                            <div className="w-24 h-24 bg-[var(--color-cyan)]/10 text-[var(--color-cyan-dark)] rounded-full flex items-center justify-center mb-6">
+                                <Mail className="w-12 h-12" />
+                            </div>
+                            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
+                                {t("تحقق من بريدك الإلكتروني", "Check your email")}
+                            </h2>
+                            <p className="text-sm text-[var(--color-text-secondary)] mb-8 leading-relaxed">
+                                {t("لقد أرسلنا رابط تفعيل الحساب إلى البريد التالى:", "We sent an account verification link to:")}
+                                <br />
+                                <span className="font-bold text-[var(--color-text-primary)] block mt-2 text-base" dir="ltr">{email}</span>
+                            </p>
+                            <div className="p-4 rounded-xl bg-[var(--color-warning)]/10 border border-[var(--color-warning)]/20 mb-8 w-full">
+                                <p className="text-sm text-[var(--color-warning)] font-medium">
+                                    {t("يرجى النقر على الرابط لتفعيل حسابك قبل تسجيل الدخول. قد تستغرق الرسالة دقيقة لتصل. راجع مجلد الرسائل غير المرغوب فيها (Spam) إذا لم تجدها.", "Please click the link to verify your account before logging in. Check your spam folder if you can't find it.")}
+                                </p>
+                            </div>
+                            <button type="button" onClick={() => { setIsVerifyingEmail(false); setIsLogin(true); setPassword(""); }} className="btn-primary w-full py-3">
+                                {t("العودة لتسجيل الدخول", "Back to Login")}
                             </button>
                         </div>
+                    ) : (
+                        <form onSubmit={handleSubmit} className="w-full max-w-sm card mt-10">
+                            <h2 className="text-2xl font-bold text-[var(--color-text-primary)] text-center mb-2">
+                                {isLogin ? t("تسجيل الدخول", "Sign In") : t("إنشاء حساب جديد", "Create Account")}
+                            </h2>
+                            <p className="text-sm text-[var(--color-text-secondary)] text-center mb-8">
+                                {isLogin ? t("أهلاً بك مجدداً! يرجى إدخال بياناتك.", "Welcome back! Please enter your details.") : t("أنشئ حسابك واستمتع بإدارة مزرعتك.", "Create an account and manage your farm.")}
+                            </p>
 
-                        {error && (
-                            <div className="mb-4 p-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-sm text-[var(--color-danger)] text-center">
-                                ❌ {error}
+                            <div className="flex items-center justify-center gap-6 mb-8 border-b border-[var(--color-border)]">
+                                <button type="button" onClick={() => { setIsLogin(true); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
+                                    className={`pb-3 text-sm font-medium transition-colors ${isLogin ? "text-[var(--color-cyan-dark)] border-b-2 border-[var(--color-cyan-dark)]" : "text-[var(--color-text-muted)]"}`}>
+                                    {t("دخول", "Login")}
+                                </button>
+                                <button type="button" onClick={() => { setIsLogin(false); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
+                                    className={`pb-3 text-sm font-medium transition-colors ${!isLogin ? "text-[var(--color-cyan-dark)] border-b-2 border-[var(--color-cyan-dark)]" : "text-[var(--color-text-muted)]"}`}>
+                                    {t("إنشاء حساب", "Sign Up")}
+                                </button>
                             </div>
-                        )}
-                        {success && (
-                            <div className="mb-4 p-3 rounded-lg bg-[var(--color-success)]/10 border border-[var(--color-success)]/20 text-sm text-[var(--color-success)] text-center">
-                                {success}
-                            </div>
-                        )}
 
-                        <div className="space-y-4">
-                            {!isLogin && (
-                                <>
-                                    <div>
-                                        <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("الاسم الكامل *", "Full Name *")}</label>
-                                        <input type="text" value={name} onChange={(e) => setName(e.target.value)}
-                                            placeholder={t("أدخل اسمك الكامل", "Enter your full name")}
-                                            className={`w-full bg-[var(--color-bg-input)] border ${nameError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir={lang === "ar" ? "rtl" : "ltr"} />
-                                        {nameError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{nameError}</span>}
-                                    </div>
-                                    <div>
-                                        <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("رقم التليفون", "Phone Number")}</label>
-                                        <div className="relative">
-                                            <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
-                                                placeholder="+20 1XX XXX XXXX"
-                                                className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 ${lang === "ar" ? "pr-10 text-right" : "pl-10 text-left"} text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
-                                            <Phone className={`absolute top-3.5 w-4 h-4 text-[var(--color-text-muted)] ${lang === "ar" ? "right-3" : "left-3"}`} />
-                                        </div>
-                                    </div>
-                                </>
+                            {error && (
+                                <div className="mb-4 p-3 rounded-lg bg-[var(--color-danger)]/10 border border-[var(--color-danger)]/20 text-sm text-[var(--color-danger)] text-center">
+                                    ❌ {error}
+                                </div>
+                            )}
+                            {success && (
+                                <div className="mb-4 p-3 rounded-lg bg-[var(--color-success)]/10 border border-[var(--color-success)]/20 text-sm text-[var(--color-success)] text-center">
+                                    {success}
+                                </div>
                             )}
 
-                            <div>
-                                <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("البريد الإلكتروني *", "Email Address *")}</label>
-                                <div className="relative">
-                                    <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
-                                        placeholder="name@farm.com"
-                                        className={`w-full bg-[var(--color-bg-input)] border ${emailError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-4 py-3 ${lang === "ar" ? "pr-10 text-right" : "pl-10 text-left"} text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
-                                    <Mail className={`absolute top-3.5 w-4 h-4 ${emailError ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]"} ${lang === "ar" ? "right-3" : "left-3"}`} />
-                                </div>
-                                {emailError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{emailError}</span>}
-                            </div>
-
-                            <div>
-                                <div className={`flex items-center justify-between mb-1 ${lang === "en" ? "flex-row-reverse" : ""}`}>
-                                    {isLogin && <button type="button" className="text-[10px] text-[var(--color-cyan-dark)] hover:underline">{t("نسيت كلمة المرور؟", "Forgot password?")}</button>}
-                                    <label className={`text-xs text-[var(--color-text-secondary)] ${lang === "ar" ? "text-right" : "text-left"}`}>{t("كلمة المرور *", "Password *")}</label>
-                                </div>
-                                <div className="relative">
-                                    <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
-                                        placeholder="••••••••"
-                                        className={`w-full bg-[var(--color-bg-input)] border ${passwordError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
-                                    <Lock className={`absolute top-3.5 w-4 h-4 ${passwordError ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]"} ${lang === "ar" ? "right-3" : "left-3"}`} />
-                                    <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute top-3.5 text-[var(--color-text-muted)] ${lang === "ar" ? "left-3" : "right-3"}`}>
-                                        {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {passwordError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{passwordError}</span>}
-                            </div>
-
-                            <button type="submit" disabled={loading}
-                                className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2 disabled:opacity-60">
-                                {loading ? (
-                                    <div className="w-5 h-5 border-2 border-[var(--color-text-primary)] border-t-transparent rounded-full animate-spin" />
-                                ) : isLogin ? (
-                                    <><LogIn className="w-5 h-5" />{t("تسجيل الدخول", "Sign In")}</>
-                                ) : (
-                                    <><UserPlus className="w-5 h-5" />{t("إنشاء حساب", "Sign Up")}</>
+                            <div className="space-y-4">
+                                {!isLogin && (
+                                    <>
+                                        <div>
+                                            <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("الاسم الكامل *", "Full Name *")}</label>
+                                            <input type="text" value={name} onChange={(e) => setName(e.target.value)}
+                                                placeholder={t("أدخل اسمك الكامل", "Enter your full name")}
+                                                className={`w-full bg-[var(--color-bg-input)] border ${nameError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-4 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir={lang === "ar" ? "rtl" : "ltr"} />
+                                            {nameError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{nameError}</span>}
+                                        </div>
+                                        <div>
+                                            <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("رقم التليفون", "Phone Number")}</label>
+                                            <div className="relative">
+                                                <input type="tel" value={phone} onChange={(e) => setPhone(e.target.value)}
+                                                    placeholder="+20 1XX XXX XXXX"
+                                                    className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-4 py-3 ${lang === "ar" ? "pr-10 text-right" : "pl-10 text-left"} text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
+                                                <Phone className={`absolute top-3.5 w-4 h-4 text-[var(--color-text-muted)] ${lang === "ar" ? "right-3" : "left-3"}`} />
+                                            </div>
+                                        </div>
+                                    </>
                                 )}
-                            </button>
 
-                            <div className="flex items-center gap-3 my-4">
-                                <div className="flex-1 h-px bg-[var(--color-border)]" />
-                                <span className="text-xs text-[var(--color-text-muted)]">{t("أو عبر", "Or via")}</span>
-                                <div className="flex-1 h-px bg-[var(--color-border)]" />
+                                <div>
+                                    <label className={`text-xs text-[var(--color-text-secondary)] block mb-1 ${lang === "ar" ? "text-right" : "text-left"}`}>{t("البريد الإلكتروني *", "Email Address *")}</label>
+                                    <div className="relative">
+                                        <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                                            placeholder="name@farm.com"
+                                            className={`w-full bg-[var(--color-bg-input)] border ${emailError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-4 py-3 ${lang === "ar" ? "pr-10 text-right" : "pl-10 text-left"} text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
+                                        <Mail className={`absolute top-3.5 w-4 h-4 ${emailError ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]"} ${lang === "ar" ? "right-3" : "left-3"}`} />
+                                    </div>
+                                    {emailError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{emailError}</span>}
+                                </div>
+
+                                <div>
+                                    <div className={`flex items-center justify-between mb-1 ${lang === "en" ? "flex-row-reverse" : ""}`}>
+                                        {isLogin && <button type="button" className="text-[10px] text-[var(--color-cyan-dark)] hover:underline">{t("نسيت كلمة المرور؟", "Forgot password?")}</button>}
+                                        <label className={`text-xs text-[var(--color-text-secondary)] ${lang === "ar" ? "text-right" : "text-left"}`}>{t("كلمة المرور *", "Password *")}</label>
+                                    </div>
+                                    <div className="relative">
+                                        <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)}
+                                            placeholder="••••••••"
+                                            className={`w-full bg-[var(--color-bg-input)] border ${passwordError ? "border-[var(--color-danger)]" : "border-[var(--color-border)]"} rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)] placeholder:text-[var(--color-text-muted)]`} dir="ltr" />
+                                        <Lock className={`absolute top-3.5 w-4 h-4 ${passwordError ? "text-[var(--color-danger)]" : "text-[var(--color-text-muted)]"} ${lang === "ar" ? "right-3" : "left-3"}`} />
+                                        <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute top-3.5 text-[var(--color-text-muted)] ${lang === "ar" ? "left-3" : "right-3"}`}>
+                                            {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                        </button>
+                                    </div>
+                                    {passwordError && <span className="text-[10px] text-[var(--color-danger)] mt-1 block">{passwordError}</span>}
+                                </div>
+
+                                <button type="submit" disabled={loading}
+                                    className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2 disabled:opacity-60">
+                                    {loading ? (
+                                        <div className="w-5 h-5 border-2 border-[var(--color-text-primary)] border-t-transparent rounded-full animate-spin" />
+                                    ) : isLogin ? (
+                                        <><LogIn className="w-5 h-5" />{t("تسجيل الدخول", "Sign In")}</>
+                                    ) : (
+                                        <><UserPlus className="w-5 h-5" />{t("إنشاء حساب", "Sign Up")}</>
+                                    )}
+                                </button>
+
+                                <div className="flex items-center gap-3 my-4">
+                                    <div className="flex-1 h-px bg-[var(--color-border)]" />
+                                    <span className="text-xs text-[var(--color-text-muted)]">{t("أو عبر", "Or via")}</span>
+                                    <div className="flex-1 h-px bg-[var(--color-border)]" />
+                                </div>
+
+                                <button type="button" onClick={handleGoogleLogin} disabled={loading}
+                                    className="w-full py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text-primary)] flex items-center justify-center gap-2 hover:border-[var(--color-cyan-dark)] transition-colors disabled:opacity-60">
+                                    <svg className="w-5 h-5" viewBox="0 0 24 24">
+                                        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
+                                        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
+                                        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
+                                        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
+                                    </svg>
+                                    {t("المتابعة باستخدام Google", "Continue with Google")}
+                                </button>
+
+                                <p className="text-center text-xs text-[var(--color-text-muted)] mt-4">
+                                    {isLogin ? t("ليس لديك حساب؟", "Don't have an account?") : t("لديك حساب بالفعل؟", "Already have an account?")}
+                                    <button type="button" onClick={() => { setIsLogin(!isLogin); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
+                                        className={`text-[var(--color-cyan-dark)] hover:underline ${lang === "ar" ? "mr-1" : "ml-1"}`}>
+                                        {isLogin ? t("سجل الآن مجاناً", "Sign up now") : t("تسجيل الدخول", "Sign In")}
+                                    </button>
+                                </p>
                             </div>
 
-                            <button type="button" onClick={handleGoogleLogin} disabled={loading}
-                                className="w-full py-3 bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-xl text-sm text-[var(--color-text-primary)] flex items-center justify-center gap-2 hover:border-[var(--color-cyan-dark)] transition-colors disabled:opacity-60">
-                                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                                    <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-                                    <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-                                    <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-                                    <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-                                </svg>
-                                {t("المتابعة باستخدام Google", "Continue with Google")}
-                            </button>
-
-                            <p className="text-center text-xs text-[var(--color-text-muted)] mt-4">
-                                {isLogin ? t("ليس لديك حساب؟", "Don't have an account?") : t("لديك حساب بالفعل؟", "Already have an account?")}
-                                <button type="button" onClick={() => { setIsLogin(!isLogin); setError(""); setEmailError(""); setPasswordError(""); setNameError(""); setSuccess(""); }}
-                                    className={`text-[var(--color-cyan-dark)] hover:underline ${lang === "ar" ? "mr-1" : "ml-1"}`}>
-                                    {isLogin ? t("سجل الآن مجاناً", "Sign up now") : t("تسجيل الدخول", "Sign In")}
-                                </button>
-                            </p>
-                        </div>
-
-                        <p className="text-center text-[10px] text-[var(--color-text-muted)] mt-8">{t("© AquaSmart 2024. جميع الحقوق محفوظة.", "© 2024 AquaSmart. All rights reserved.")}</p>
-                    </form>
+                            <p className="text-center text-[10px] text-[var(--color-text-muted)] mt-8">{t("© AquaSmart 2024. جميع الحقوق محفوظة.", "© 2024 AquaSmart. All rights reserved.")}</p>
+                        </form>
+                    )}
                 </div>
             </div>
         </PageTransition>
