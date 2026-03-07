@@ -12,7 +12,23 @@ export interface UserProfile {
         name: string;
         location: string;
         pondCount: number;
-    }
+    };
+    settings?: {
+        notifications?: {
+            system: boolean;
+            daily: boolean;
+            marketing: boolean;
+        };
+        farm?: {
+            fishTypes: string[];
+        };
+        security?: {
+            twoFactorEnabled: boolean;
+        };
+        performance?: {
+            lowPowerMode: boolean;
+        };
+    };
 }
 
 export interface AuthContextType {
