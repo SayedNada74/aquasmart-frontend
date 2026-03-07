@@ -10,6 +10,8 @@ import {
     updateProfile,
     GoogleAuthProvider,
     signInWithPopup,
+    sendEmailVerification,
+    signOut
 } from "firebase/auth";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { useApp } from "@/lib/AppContext";
@@ -101,12 +103,24 @@ export default function LoginPage() {
         try {
             if (isLogin) {
                 // LOGIN
-                await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+                const userCred = await signInWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
+
+                // Enforce Email Verification for Password Logins
+                if (!userCred.user.emailVerified) {
+                    await signOut(auth);
+                    setError(t("يجب تفعيل حسابك أولاً. يرجى مراجعة بريدك الإلكتروني لرسالة التفعيل.", "You must verify your account first. Please check your email for the verification link."));
+                    setLoading(false);
+                    return;
+                }
+
                 router.push("/landing");
             } else {
                 // SIGNUP
                 const userCred = await createUserWithEmailAndPassword(auth, trimmedEmail, trimmedPassword);
                 await updateProfile(userCred.user, { displayName: name.trim() });
+
+                // Send verification email
+                await sendEmailVerification(userCred.user);
 
                 // Save profile to Firebase RTDB
                 await set(ref(database, `users/${userCred.user.uid}`), {
@@ -119,8 +133,17 @@ export default function LoginPage() {
                     createdAt: new Date().toISOString()
                 });
 
-                setSuccess("تم إنشاء الحساب بنجاح! ✅ جاري التحويل...");
-                setTimeout(() => router.push("/landing"), 1500);
+                // Sign out immediately until they verify
+                await signOut(auth);
+
+                setSuccess(t("تم إنشاء الحساب بنجاح! ✅ يرجى تفعيل حسابك من خلال الرابط المرسل لبريدك الإلكتروني قبل تسجيل الدخول.", "Account created successfully! ✅ Please verify your account via the link sent to your email before logging in."));
+
+                // Switch back to login view so they can login after verifying
+                setTimeout(() => {
+                    setIsLogin(true);
+                    setSuccess("");
+                    setPassword("");
+                }, 4000);
             }
         } catch (err: any) {
             const code = err?.code || "";
@@ -158,6 +181,14 @@ export default function LoginPage() {
                     pondCount: "3",
                     createdAt: new Date().toISOString()
                 });
+            }
+
+            // Optional safeguard for unverified Google emails (rare)
+            if (!result.user.emailVerified) {
+                await signOut(auth);
+                setError(t("يجب أن يكون حساب جوجل المستخدم مفعّلاً.", "The Google account used must have a verified email."));
+                setLoading(false);
+                return;
             }
 
             router.push("/landing");

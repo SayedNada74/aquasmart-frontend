@@ -40,8 +40,8 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         );
     }
 
-    // Show loading while checking auth
-    if (!authChecked) {
+    // Show loading while checking auth or during redirect for unauthenticated users
+    if (!authChecked || (!isLoggedIn && !isFullPage)) {
         return (
             <div className="flex h-screen items-center justify-center" dir={dir}>
                 <SiteBackground />
