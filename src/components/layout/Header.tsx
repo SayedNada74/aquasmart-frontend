@@ -120,7 +120,15 @@ export function Header({ onMenuToggle }: HeaderProps) {
                                 <Settings className="w-4 h-4 text-[var(--color-text-muted)]" />
                                 {t("الإعدادات", "Settings")}
                             </Link>
-                            <button onClick={() => { setShowProfile(false); router.push("/login"); }} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-bg-card-hover)] text-sm text-[#ef4444] w-full border-t border-[var(--color-border)]">
+                            <button onClick={async () => {
+                                setShowProfile(false);
+                                const { signOut } = await import("firebase/auth");
+                                const { auth } = await import("@/lib/firebase");
+                                await signOut(auth);
+                                localStorage.removeItem("aquasmart_profile");
+                                localStorage.removeItem("aquasmart_notifs");
+                                router.push("/login");
+                            }} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-bg-card-hover)] text-sm text-[#ef4444] w-full border-t border-[var(--color-border)]">
                                 <LogOut className="w-4 h-4" />
                                 {t("تسجيل الخروج", "Sign Out")}
                             </button>
