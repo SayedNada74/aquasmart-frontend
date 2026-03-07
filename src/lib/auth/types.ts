@@ -1,14 +1,18 @@
 export interface UserProfile {
     uid: string;
     email: string;
-    name: string;
-    phone?: string;
-    farmName?: string;
-    location?: string;
-    pondCount?: string;
+    fullName: string;
+    phoneNumber: string;
     provider: "password" | "google";
     createdAt: string;
     role: string;
+    emailVerified: boolean;
+    profileCompleted: boolean;
+    farm: {
+        name: string;
+        location: string;
+        pondCount: number;
+    }
 }
 
 export interface AuthContextType {

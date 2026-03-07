@@ -8,6 +8,7 @@ import { usePathname } from "next/navigation";
 import { SiteBackground } from "@/components/backgrounds/SiteBackground";
 import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { AuthGate } from "@/components/auth/AuthGate";
+import { CompleteProfileModal } from "@/components/auth/CompleteProfileModal";
 
 function InnerLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useApp();
@@ -36,6 +37,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
                     <main className="flex-1 overflow-y-auto p-4 md:p-6">{children}</main>
                 </div>
             </div>
+            <CompleteProfileModal />
         </AuthGate>
     );
 }

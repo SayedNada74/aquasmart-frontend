@@ -7,7 +7,7 @@ import { useApp } from "@/lib/AppContext";
 import { SiteBackground } from "@/components/backgrounds/SiteBackground";
 
 export function AuthGate({ children }: { children: React.ReactNode }) {
-    const { user, loading, isVerified } = useAuth();
+    const { user, profile, loading, isVerified } = useAuth();
     const router = useRouter();
     const pathname = usePathname();
     const { dir } = useApp();
@@ -20,7 +20,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
                 router.replace("/verify-email");
             }
         }
-    }, [user, loading, isVerified, router]);
+    }, [user, profile, loading, isVerified, router]);
 
     if (loading) {
         return (
@@ -32,7 +32,9 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     }
 
     // Prevents flashing of protected content before redirect actually occurs
-    if (!user || (!isVerified && pathname !== "/verify-email")) {
+    const isRedirecting = !user || (!isVerified && pathname !== "/verify-email");
+
+    if (isRedirecting) {
         return (
             <div className="flex h-screen items-center justify-center p-4" dir={dir}>
                 <SiteBackground />

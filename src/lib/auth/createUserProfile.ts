@@ -20,14 +20,18 @@ export async function createOrUpdateUserProfile(
         const newProfile: UserProfile = {
             uid: user.uid,
             email: user.email || "",
-            name: displayNameInput || user.displayName || "مستخدم جديد",
-            phone: phoneInput || user.phoneNumber || "",
-            farmName: "AquaSmart Delta",
-            location: "مصر",
-            pondCount: "3",
+            fullName: displayNameInput || user.displayName || "مستخدم جديد",
+            phoneNumber: phoneInput || user.phoneNumber || "",
             provider: provider,
             createdAt: new Date().toISOString(),
-            role: "user"
+            role: "user",
+            emailVerified: user.emailVerified,
+            profileCompleted: false,
+            farm: {
+                name: "AquaSmart Delta",
+                location: "مصر",
+                pondCount: 1
+            }
         };
         await set(userRef, newProfile);
 
@@ -36,7 +40,7 @@ export async function createOrUpdateUserProfile(
             fetch("/api/email/welcome", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email: newProfile.email, name: newProfile.name }),
+                body: JSON.stringify({ email: newProfile.email, name: newProfile.fullName }),
             }).catch(err => console.error("Error triggering welcome email fire-and-forget:", err));
         } catch (err) {
             console.error("Failed to trigger welcome email process:", err);

@@ -1,56 +1,52 @@
 "use client";
 
-import { User, Bell, Shield, Sparkles, LogOut, Save, X, Settings as Cog } from "lucide-react";
+import { User, Bell, Shield, Sparkles, LogOut, Save, X, Settings as Cog, Mail } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { PageTransition } from "@/components/motion/PageTransition";
-
-const defaultProfile = {
-    name: "أحمد محمد",
-    email: "ahmed@aquasmart.io",
-    phone: "+20 123 456 7890",
-    farmName: "AquaSmart Delta",
-    location: "كفر الشيخ، مصر",
-    pondCount: "12",
-};
+import { database } from "@/lib/firebase";
+import { ref, update } from "firebase/database";
+import { UpdatePasswordModal } from "@/components/auth/UpdatePasswordModal";
 
 const defaultNotifs = { system: true, daily: true, marketing: false };
 
 export default function SettingsPage() {
-    const { t, lang, setUserName, lowPowerMode, setLowPowerMode } = useApp();
+    const { t, lang, setUserName, lowPowerMode, setLowPowerMode, dir } = useApp();
     const router = useRouter();
-    const { profile: authProfile } = useAuth();
+    const { profile: authProfile, refreshUser, user: firebaseUser, loading: authLoading } = useAuth();
 
     const [notifications, setNotifications] = useState(defaultNotifs);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
+    const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
 
-    // Initialize with authProfile if available, otherwise fallback
+    // Initialize with empty values, avoiding hardcoded defaults entirely
     const [profile, setProfile] = useState({
-        name: authProfile?.name || defaultProfile.name,
-        email: authProfile?.email || defaultProfile.email,
-        phone: authProfile?.phone || defaultProfile.phone,
-        farmName: authProfile?.farmName || defaultProfile.farmName,
-        location: authProfile?.location || defaultProfile.location,
-        pondCount: authProfile?.pondCount || defaultProfile.pondCount,
+        displayName: "",
+        email: "",
+        phoneNumber: "",
+        farmName: "",
+        location: "",
+        pondCount: 0,
     });
 
     // Update profile state when authenticaton profile loads
     useEffect(() => {
         if (authProfile) {
-            setProfile(prev => ({
-                ...prev,
-                name: authProfile.name || prev.name,
-                email: authProfile.email || prev.email,
-                phone: authProfile.phone || prev.phone,
-                farmName: authProfile.farmName || prev.farmName,
-                location: authProfile.location || prev.location,
-                pondCount: authProfile.pondCount || prev.pondCount,
-            }));
+            setProfile({
+                displayName: authProfile.fullName || "",
+                email: authProfile.email || "",
+                phoneNumber: authProfile.phoneNumber || "",
+                farmName: authProfile.farm?.name || "",
+                location: authProfile.farm?.location || "",
+                pondCount: authProfile.farm?.pondCount || 0,
+            });
+            // Update global name for UI consistency
+            setUserName(authProfile.fullName);
         }
-    }, [authProfile]);
+    }, [authProfile, setUserName]);
 
     // Load saved data from localStorage on mount
     useEffect(() => {
@@ -60,32 +56,35 @@ export default function SettingsPage() {
         } catch { }
     }, []);
 
-    // Translate defaults on lang change
-    useEffect(() => {
-        setProfile((prev) => {
-            const updated = { ...prev };
-            if (prev.location === "كفر الشيخ، مصر" || prev.location === "Kafr El-Sheikh, Egypt") {
-                updated.location = t("كفر الشيخ، مصر", "Kafr El-Sheikh, Egypt");
-            }
-            if (!authProfile?.name && (prev.name === "أحمد محمد" || prev.name === "Ahmed Mohamed")) {
-                updated.name = t("أحمد محمد", "Ahmed Mohamed");
-            }
-            return updated;
-        });
-    }, [lang, t, authProfile]);
-
     const handleSave = async () => {
+        if (!firebaseUser) return;
         setSaving(true);
-        // Simulate save - In a real app we would update Firebase Realtime Database here
-        await new Promise((r) => setTimeout(r, 1200));
 
-        localStorage.setItem("aquasmart_notifs", JSON.stringify(notifications));
-        // Update global context so name changes everywhere
-        setUserName(profile.name);
+        try {
+            const userRef = ref(database, `users/${firebaseUser.uid}`);
+            await update(userRef, {
+                fullName: profile.displayName,
+                phoneNumber: profile.phoneNumber,
+                farm: {
+                    name: profile.farmName,
+                    location: profile.location,
+                    pondCount: Number(profile.pondCount),
+                },
+                profileCompleted: true // Ensure it's marked as complete
+            });
 
-        setSaving(false);
-        setSaved(true);
-        setTimeout(() => setSaved(false), 3000);
+            localStorage.setItem("aquasmart_notifs", JSON.stringify(notifications));
+            setUserName(profile.displayName);
+            await refreshUser();
+
+            setSaved(true);
+            setTimeout(() => setSaved(false), 3000);
+        } catch (error) {
+            console.error("Error saving profile:", error);
+            alert(t("حدث خطأ أثناء حفظ البيانات", "Error saving data"));
+        } finally {
+            setSaving(false);
+        }
     };
 
     const handleLogout = async () => {
@@ -99,6 +98,18 @@ export default function SettingsPage() {
     return (
         <PageTransition>
             <div className="max-w-5xl mx-auto space-y-6 pb-8">
+                <UpdatePasswordModal
+                    isOpen={isPasswordModalOpen}
+                    onClose={() => setIsPasswordModalOpen(false)}
+                />
+
+                {/* Loader overlay while fetching auth data initialy */}
+                {authLoading && !authProfile && (
+                    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/10 backdrop-blur-[2px]">
+                        <div className="w-10 h-10 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
+                    </div>
+                )}
+
                 {/* Toast */}
                 {saved && (
                     <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 bg-[#10b981] text-white px-6 py-3 rounded-xl shadow-lg shadow-[#10b981]/20 flex items-center gap-2 animate-in slide-in-from-top-4 duration-300">
@@ -115,15 +126,19 @@ export default function SettingsPage() {
                     </button>
                     <div className="flex items-center gap-4">
                         <div className={lang === "ar" ? "text-right" : "text-left"}>
-                            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">{profile.name}</h2>
+                            <h2 className="text-xl font-bold text-[var(--color-text-primary)]">{profile.displayName || t("تحميل...", "Loading...")}</h2>
                             <p className="text-sm text-[var(--color-text-secondary)]">{t("مدير المزرعة", "Farm Manager")}</p>
                             <div className="flex items-center gap-2 mt-1" style={{ justifyContent: lang === "ar" ? "flex-end" : "flex-start" }}>
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#10b981]/15 text-[#10b981]">{t("نشط", "Active")}</span>
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#3b82f6]/15 text-[#3b82f6]">{t("مسؤول النظام", "Admin")}</span>
                             </div>
                         </div>
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center">
-                            <User className="w-8 h-8 text-white" />
+                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center overflow-hidden">
+                            {firebaseUser?.photoURL ? (
+                                <img src={firebaseUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
+                            ) : (
+                                <User className="w-8 h-8 text-white" />
+                            )}
                         </div>
                     </div>
                 </div>
@@ -215,17 +230,17 @@ export default function SettingsPage() {
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                 <div>
                                     <label className="text-xs text-[var(--color-text-secondary)] block mb-1">{t("الاسم الكامل", "Full Name")}</label>
-                                    <input id="nameInput" type="text" value={profile.name} onChange={(e) => setProfile(p => ({ ...p, name: e.target.value }))}
+                                    <input id="nameInput" type="text" value={profile.displayName} onChange={(e) => setProfile(p => ({ ...p, displayName: e.target.value }))}
                                         className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan)]" />
                                 </div>
                                 <div>
                                     <label className="text-xs text-[var(--color-text-secondary)] block mb-1">{t("البريد الإلكتروني", "Email")}</label>
-                                    <input type="email" value={profile.email} onChange={(e) => setProfile(p => ({ ...p, email: e.target.value }))}
-                                        className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan)]" />
+                                    <input type="email" value={profile.email} disabled
+                                        className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text-muted)] opacity-70 cursor-not-allowed" />
                                 </div>
                                 <div className="md:col-span-2">
                                     <label className="text-xs text-[var(--color-text-secondary)] block mb-1">{t("رقم الهاتف", "Phone Number")}</label>
-                                    <input type="tel" value={profile.phone} onChange={(e) => setProfile(p => ({ ...p, phone: e.target.value }))}
+                                    <input type="tel" value={profile.phoneNumber} onChange={(e) => setProfile(p => ({ ...p, phoneNumber: e.target.value }))}
                                         className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan)]" />
                                 </div>
                             </div>
@@ -250,7 +265,7 @@ export default function SettingsPage() {
                                 </div>
                                 <div>
                                     <label className="text-xs text-[var(--color-text-secondary)] block mb-1">{t("عدد الأحواض", "Total Ponds")}</label>
-                                    <input type="number" value={profile.pondCount} onChange={(e) => setProfile(p => ({ ...p, pondCount: e.target.value }))}
+                                    <input type="number" value={profile.pondCount} onChange={(e) => setProfile(p => ({ ...p, pondCount: Number(e.target.value) }))}
                                         className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg px-4 py-2.5 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan)]" />
                                 </div>
                                 <div>
@@ -272,10 +287,15 @@ export default function SettingsPage() {
                             </h3>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-input)]">
-                                    <button className="btn-secondary text-xs px-3 py-1">{t("تحديث", "Update")}</button>
+                                    <button
+                                        onClick={() => setIsPasswordModalOpen(true)}
+                                        className="btn-secondary text-xs px-3 py-1"
+                                    >
+                                        {t("تحديث", "Update")}
+                                    </button>
                                     <div>
                                         <p className="text-sm text-[var(--color-text-primary)] font-medium">{t("كلمة المرور", "Password")}</p>
-                                        <p className="text-[10px] text-[var(--color-text-muted)]">{t("آخر تغيير: منذ 3 أيام", "Last changed: 3 days ago")}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{t("آخر تغيير: غير متاح", "Last changed: N/A")}</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center justify-between p-3 rounded-lg bg-[var(--color-bg-input)]">
