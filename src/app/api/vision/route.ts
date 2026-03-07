@@ -17,7 +17,7 @@ export async function POST(req: Request) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemPrompt = `
 أنت خبير في أمراض الأسماك والاستزراع السمكي (AquaSmart AI Expert).
@@ -41,27 +41,10 @@ export async function POST(req: Request) {
         const text = response.text();
 
         return NextResponse.json({ reply: text });
-    } catch (error: any) {
+    } catch (error) {
         console.error("Gemini Vision API Error:", error);
-
-        const errorMessage = error.message || "";
-
-        // Handle 429 Rate Limit / Quota Exceeded gracefully
-        if (errorMessage.includes("429") || errorMessage.includes("Quota exceeded") || errorMessage.includes("rate-limits")) {
-            return NextResponse.json({
-                reply: "⚠️ أهلاً بك! نظراً للضغط الحالي على خوادم الذكاء الاصطناعي (Gemini)، يتوفر التحليل الأساسي فقط في الوقت الحالي. بناءً على المؤشرات العامة لمنصة AquaSmart، يرجى الاستمرار في مراقبة جودة المياه. يرجى الانتظار دقيقة والمحاولة مرة أخرى لتحليل الصورة بدقة."
-            }, { status: 200 }); // Return 200 so the frontend displays the message gracefully
-        }
-
-        // Handle 403 API Key issues gracefully
-        if (errorMessage.includes("403") || errorMessage.includes("API key not valid")) {
-            return NextResponse.json({
-                reply: "⚠️ عذراً، هناك مشكلة في المصادقة مع خوادم الذكاء الاصطناعي الخاص بالرؤية. يرجى التحقق من صحة مفتاح GEMINI_API_KEY."
-            }, { status: 200 });
-        }
-
         return NextResponse.json(
-            { reply: "عذراً، حدث إجهاد مؤقت في الشبكة أثناء تحليل الصورة. يرجى المحاولة مرة أخرى بعد قليل." },
+            { reply: "عذراً، حدث خطأ في تحليل الصورة. يرجى التأكد من جودة الصورة أو محاولة صورة أخرى." },
             { status: 200 }
         );
     }
