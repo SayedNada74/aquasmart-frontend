@@ -1,10 +1,12 @@
 "use client";
 
-import { Waves, Wind, Droplets, Utensils, Plus, Clock } from "lucide-react";
-import { useState } from "react";
+import { Waves, Wind, Droplets, Utensils, Plus, Clock, Loader2 } from "lucide-react";
+import { useState, useEffect } from "react";
 import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
+import { database } from "@/lib/firebase";
+import { ref, onValue, set, update } from "firebase/database";
 
 interface Device {
     id: string;
@@ -15,7 +17,7 @@ interface Device {
     consumption: string;
 }
 
-const initialDevices: Device[] = [
+const defaultDevices: Device[] = [
     { id: "1", name_ar: "بدالة رقم 01 - حوض أ", name_en: "Aerator #01 - Pond A", type: "aerator", active: true, consumption: "1.2 kW" },
     { id: "2", name_ar: "بدالة رقم 02 - حوض ب", name_en: "Aerator #02 - Pond B", type: "aerator", active: false, consumption: "0 kW" },
     { id: "3", name_ar: "مضخة التدوير المركزية", name_en: "Central Circulation Pump", type: "pump", active: true, consumption: "" },
@@ -24,15 +26,53 @@ const initialDevices: Device[] = [
 
 export default function ControlPage() {
     const { t, lang } = useApp();
-    const [devices, setDevices] = useState(initialDevices);
+    const [devices, setDevices] = useState<Device[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [pendingId, setPendingId] = useState<string | null>(null);
     const [feedingMsg, setFeedingMsg] = useState("");
 
-    const toggleDevice = (id: string) => {
-        setDevices((prev) => prev.map((d) => (d.id === id ? { ...d, active: !d.active } : d)));
+    // Firebase Sync
+    useEffect(() => {
+        const devicesRef = ref(database, "control/devices");
+        const unsub = onValue(devicesRef, (snap) => {
+            const data = snap.val();
+            if (data) {
+                // Convert object to array and ensure order
+                const deviceArray = Object.values(data) as Device[];
+                setDevices(deviceArray.sort((a, b) => a.id.localeCompare(b.id)));
+            } else {
+                // Initialize if empty
+                set(devicesRef, defaultDevices.reduce((acc: any, d) => ({ ...acc, [d.id]: d }), {}));
+                setDevices(defaultDevices);
+            }
+            setLoading(false);
+        });
+        return () => unsub();
+    }, []);
+
+    const toggleDevice = async (id: string, currentStatus: boolean) => {
+        setPendingId(id);
+        try {
+            const deviceRef = ref(database, `control/devices/${id}`);
+            await update(deviceRef, { active: !currentStatus });
+        } catch (error) {
+            console.error("Failed to toggle device:", error);
+        } finally {
+            setPendingId(null);
+        }
     };
 
-    const feedNow = (feeder: string) => {
+    const feedNow = async (feeder: string) => {
         setFeedingMsg(t(`جاري تغذية ${feeder}...`, `Feeding ${feeder}...`));
+        // Simulate a real feeder action in Firebase (could be a log or status update)
+        const logRef = ref(database, `control/logs/${Date.now()}`);
+        await set(logRef, {
+            text_ar: `تمت تغذية ${feeder} يدوياً`,
+            text_en: `${feeder} fed manually`,
+            time: new Date().toISOString(),
+            type: "feeder"
+        });
+
         setTimeout(() => setFeedingMsg(t(`تمت تغذية ${feeder} بنجاح ✓`, `${feeder} fed successfully ✓`)), 1500);
         setTimeout(() => setFeedingMsg(""), 4000);
     };
@@ -47,6 +87,14 @@ export default function ControlPage() {
         { time: "AM 06:00", label: t("تغذية", "Feeding"), desc: t("تغذية صباحية - كل الأحواض", "Morning feed - All ponds"), days: [t("س", "S"), t("ن", "M"), t("ث", "T"), t("ت", "W"), t("خ", "T"), t("ج", "F"), t("ح", "S")] },
         { time: "PM 08:00", label: t("تهوية", "Aeration"), desc: t("تشغيل البدالات - الوضع الليلي", "Aerators ON - Night mode"), days: [] },
     ];
+
+    if (loading) {
+        return (
+            <div className="flex h-full items-center justify-center min-h-[400px]">
+                <Loader2 className="w-10 h-10 text-[var(--color-cyan)] animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <PageTransition>
@@ -68,12 +116,17 @@ export default function ControlPage() {
                         {devices.filter((d) => d.type === "aerator").map((d) => (
                             <MotionCard key={d.id} className="card flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => toggleDevice(d.id)}
-                                        className={`w-12 h-6 rounded-full relative transition-colors ${d.active ? "bg-[var(--color-cyan)]" : "bg-[var(--color-border)]"}`}>
+                                    <button
+                                        onClick={() => !pendingId && toggleDevice(d.id, d.active)}
+                                        disabled={pendingId === d.id}
+                                        className={`w-12 h-6 rounded-full relative transition-colors ${d.active ? "bg-[var(--color-cyan)]" : "bg-[var(--color-border)]"} ${pendingId === d.id ? "opacity-50 cursor-not-allowed" : ""}`}>
                                         <div className={`w-5 h-5 rounded-full bg-white absolute top-0.5 transition-all ${d.active ? (lang === "ar" ? "right-0.5" : "left-6") : (lang === "ar" ? "left-0.5" : "left-0.5")}`} />
                                     </button>
                                     <div>
-                                        <p className="text-sm font-semibold text-[var(--color-text-primary)]">{t(d.name_ar, d.name_en)}</p>
+                                        <div className="flex items-center gap-2">
+                                            <p className="text-sm font-semibold text-[var(--color-text-primary)]">{t(d.name_ar, d.name_en)}</p>
+                                            {pendingId === d.id && <Loader2 className="w-3 h-3 animate-spin text-[var(--color-cyan)]" />}
+                                        </div>
                                         <p className="text-[10px] text-[var(--color-text-muted)]">{d.active ? t(`متصل • استهلاك ${d.consumption}`, `Connected • ${d.consumption}`) : t("منقطع", "Disconnected")}</p>
                                     </div>
                                 </div>
@@ -93,8 +146,11 @@ export default function ControlPage() {
                         {devices.filter((d) => d.type === "pump").map((d) => (
                             <MotionCard key={d.id} className="card flex items-center justify-between">
                                 <div className="flex items-center gap-3">
-                                    <button onClick={() => toggleDevice(d.id)}
-                                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all ${d.active ? "bg-[#10b981] text-white" : "bg-[var(--color-bg-input)] text-[var(--color-text-muted)]"}`}>
+                                    <button
+                                        onClick={() => !pendingId && toggleDevice(d.id, d.active)}
+                                        disabled={pendingId === d.id}
+                                        className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all flex items-center gap-2 ${d.active ? "bg-[#10b981] text-white" : "bg-[var(--color-bg-input)] text-[var(--color-text-muted)]"} ${pendingId === d.id ? "opacity-50" : ""}`}>
+                                        {pendingId === d.id && <Loader2 className="w-3 h-3 animate-spin" />}
                                         {d.active ? t("إيقاف", "Stop") : t("تشغيل", "Start")}
                                     </button>
                                     <div>
@@ -167,20 +223,25 @@ export default function ControlPage() {
                             {t("سجل العمليات", "Operation Log")}
                         </h3>
                         <div className="space-y-3">
-                            {[
-                                { text: t('تم إيقاف "بدالة 01" يدوياً', '"Aerator 01" stopped manually'), detail: t("منذ 15 دقيقة • بواسطة المشرف", "15 min ago • by Admin"), color: "bg-[#3b82f6]" },
-                                { text: t("اكتمال دورة التغذية التلقائية", "Auto-feeding cycle complete"), detail: t("منذ ساعتين • تلقائي", "2 hours ago • Automatic"), color: "bg-[#10b981]" },
-                                { text: t("تنبيه: ارتفاع درجة الحرارة (°)", "Alert: High Temperature (°)"), detail: t("منذ 4 ساعات • حوض ج", "4 hours ago • Pond C"), color: "bg-[#f59e0b]" },
-                                { text: t('تشغيل "مضخة المركز" آلياً', '"Central Pump" started auto'), detail: t("منذ 6 ساعات • جدول المياه", "6 hours ago • Water schedule"), color: "bg-[var(--color-teal)]" },
-                            ].map((log, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${log.color}`} />
-                                    <div className="flex-1">
-                                        <p className="text-xs font-medium text-[var(--color-text-primary)]">{log.text}</p>
-                                        <p className="text-[10px] text-[var(--color-text-muted)]">{log.detail}</p>
+                            {devices.length > 0 ? (
+                                // Adding some mock logs if firebase logs empty, or we can fetch them
+                                [
+                                    { text: t('تم إيقاف "بدالة 01" يدوياً', '"Aerator 01" stopped manually'), detail: t("منذ دقائق • بواسطة المشرف", "A few mins ago • by Admin"), color: "bg-[#3b82f6]" },
+                                    { text: t("اكتمال دورة التغذية التلقائية", "Auto-feeding cycle complete"), detail: t("منذ ساعتين • تلقائي", "2 hours ago • Automatic"), color: "bg-[#10b981]" },
+                                    { text: t("تنبيه: ارتفاع درجة الحرارة (°)", "Alert: High Temperature (°)"), detail: t("منذ 4 ساعات • حوض ج", "4 hours ago • Pond C"), color: "bg-[#f59e0b]" },
+                                    { text: t('تشغيل "مضخة المركز" آلياً', '"Central Pump" started auto'), detail: t("منذ 6 ساعات • جدول المياه", "6 hours ago • Water schedule"), color: "bg-[var(--color-teal)]" },
+                                ].map((log, i) => (
+                                    <div key={i} className="flex items-start gap-3">
+                                        <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${log.color}`} />
+                                        <div className="flex-1">
+                                            <p className="text-xs font-medium text-[var(--color-text-primary)]">{log.text}</p>
+                                            <p className="text-[10px] text-[var(--color-text-muted)]">{log.detail}</p>
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                ))
+                            ) : (
+                                <p className="text-xs text-[var(--color-text-muted)]">{t("لا توجد سجلات حالياً", "No logs currently")}</p>
+                            )}
                         </div>
                     </div>
                 </div>

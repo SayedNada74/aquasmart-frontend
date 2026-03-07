@@ -8,11 +8,13 @@ import {
 } from "recharts";
 import {
   Thermometer, Droplets, FlaskConical, Wind, Activity,
-  AlertTriangle, CheckCircle2, Clock, Sparkles, Waves, Radio,
+  AlertTriangle, CheckCircle2, Clock, Sparkles, Waves, Radio, Loader2
 } from "lucide-react";
 import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { fetchWeather, WeatherData } from "@/lib/weather/weatherService";
 
 interface PondCurrent { Temperature: number; PH: number; Ammonia: number; DO: number; timestamp: string; }
 interface PondAI { Status: string; Reason: string; AI_Confidence: string; }
@@ -20,11 +22,17 @@ interface PondData { id: string; current: PondCurrent; ai: PondAI; history: any[
 
 export default function DashboardPage() {
   const { t, lang } = useApp();
+  const { profile } = useAuth();
   const [ponds, setPonds] = useState<PondData[]>([]);
   const [loading, setLoading] = useState(true);
   const [activePond, setActivePond] = useState("pond_1");
+  const [weather, setWeather] = useState<WeatherData | null>(null);
 
   useEffect(() => {
+    // Weather Sync
+    const loc = profile?.farm?.location || "Default";
+    fetchWeather(loc).then(setWeather);
+
     const pondsRef = ref(database, "ponds");
     const unsub = onValue(pondsRef, (snap) => {
       const data = snap.val();
@@ -44,11 +52,11 @@ export default function DashboardPage() {
       setLoading(false);
     });
     return () => unsub();
-  }, []);
+  }, [profile?.farm?.location]);
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <div className="flex h-full items-center justify-center min-h-[500px]">
         <div className="w-14 h-14 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
       </div>
     );
@@ -67,17 +75,73 @@ export default function DashboardPage() {
     return Math.max(0, score);
   };
 
+  // Global Farm Status (for Header)
+  const globalSafety = ponds.length > 0
+    ? Math.round(ponds.reduce((acc, p) => acc + calcSafety(p), 0) / ponds.length)
+    : 0;
+
+  const globalSafetyText = globalSafety >= 75 ? t("ممتازة", "Excellent") : globalSafety >= 50 ? t("تحتاج انتباه", "Caution") : t("حرجة", "Critical");
+
+  // Active Pond Status (for detailed view)
   const safety = active ? calcSafety(active) : 0;
   const safetyColor = safety >= 75 ? "#10b981" : safety >= 50 ? "#f59e0b" : "#ef4444";
   const safetyText = safety >= 75 ? t("آمن", "Safe") : safety >= 50 ? t("تحذير", "Warning") : t("خطر", "Danger");
   const waterQuality = safety >= 80 ? 92 : safety >= 50 ? 70 : 45;
   const aiReason = active?.ai?.Reason || t("جميع المعايير ضمن النطاق الآمن. الحوض في حالة مستقرة.", "All parameters within safe range. Pond is stable.");
 
+  const currentHour = new Date().getHours();
+  const greeting = currentHour < 12
+    ? t("صباح الخير", "Good Morning")
+    : currentHour < 17
+      ? t("نهار سعيد", "Good Afternoon")
+      : t("مساء الخير", "Good Evening");
+
   const tooltipStyle = { backgroundColor: "var(--color-bg-card)", borderColor: "var(--color-border)", color: "var(--color-text-primary)", borderRadius: "8px", fontSize: "12px" };
 
   return (
     <PageTransition>
       <div className="space-y-6 pb-8">
+        {/* Header Briefing & Weather */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <MotionCard className="lg:col-span-2 bg-gradient-to-r from-[var(--color-cyan)] to-[var(--color-teal)] p-6 rounded-2xl relative overflow-hidden flex flex-col justify-center min-h-[160px]">
+            <div className="absolute top-0 right-0 p-8 opacity-10 rotate-12">
+              <Sparkles className="w-32 h-32 text-white" />
+            </div>
+            <h2 className="text-2xl font-black text-white mb-2">
+              {t(`${greeting} يا ${profile?.fullName?.split(' ')[0] || 'مدير المزرعة'}!`, `${greeting}, ${profile?.fullName?.split(' ')[0] || 'Manager'}!`)}
+            </h2>
+            <p className="text-white/80 text-sm max-w-md leading-relaxed">
+              {t(
+                `المزرعة في حالة ${globalSafetyText}. لديك ${ponds.filter(p => p.ai?.Status?.includes("Danger")).length} تنبيهات نشطة و ${totalPonds} أحواض تعمل بكفاءة.`,
+                `The farm is in ${globalSafetyText} status. You have ${ponds.filter(p => p.ai?.Status?.includes("Danger")).length} active alerts and ${totalPonds} ponds running efficiently.`
+              )}
+            </p>
+          </MotionCard>
+
+          <MotionCard className="card bg-[var(--color-bg-card)] border-2 border-[var(--color-cyan)]/10 flex items-center gap-4 p-5">
+            {weather ? (
+              <>
+                <div className="flex-1">
+                  <h3 className="text-[10px] font-bold text-[var(--color-text-muted)] uppercase tracking-widest">{t("حالة الطقس", "Weather Status")}</h3>
+                  <div className="flex items-end gap-1 my-1">
+                    <span className="text-3xl font-black text-[var(--color-text-primary)]">{Math.round(weather.temp)}°</span>
+                    <span className="text-xs text-[var(--color-text-secondary)] mb-1">{t(weather.condition === 'sunny' ? 'مشمس' : 'غائم', weather.condition)}</span>
+                  </div>
+                  <p className="text-[10px] text-[var(--color-cyan)] font-medium">{t(weather.description_ar, weather.description_en)}</p>
+                </div>
+                <div className="w-16 h-16 rounded-2xl bg-[var(--color-bg-input)] flex items-center justify-center text-4xl shadow-inner">
+                  {weather.condition === 'sunny' ? '☀️' : weather.condition === 'cloudy' ? '☁️' : '🌧️'}
+                </div>
+              </>
+            ) : (
+              <div className="flex-1 flex items-center justify-center gap-2 text-xs text-[var(--color-text-muted)] animate-pulse">
+                <Loader2 className="w-4 h-4 animate-spin" />
+                {t("جاري التحقق من الطقس...", "Checking Weather...")}
+              </div>
+            )}
+          </MotionCard>
+        </div>
+
         {/* Stats Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
           {[

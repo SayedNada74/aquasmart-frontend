@@ -10,6 +10,8 @@ import { AuthProvider } from "@/lib/auth/AuthProvider";
 import { AuthGate } from "@/components/auth/AuthGate";
 import { CompleteProfileModal } from "@/components/auth/CompleteProfileModal";
 
+import { UniversalNotifications } from "@/components/notifications/UniversalNotifications";
+
 function InnerLayout({ children }: { children: React.ReactNode }) {
     const { dir } = useApp();
     const pathname = usePathname();
@@ -31,6 +33,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
         <AuthGate>
             <div className="flex h-screen overflow-hidden relative" dir={dir}>
                 <SiteBackground />
+                <UniversalNotifications />
                 <Sidebar mobileOpen={mobileMenuOpen} onClose={() => setMobileMenuOpen(false)} />
                 <div className="flex-1 flex flex-col h-screen overflow-hidden min-w-0">
                     <Header onMenuToggle={() => setMobileMenuOpen(!mobileMenuOpen)} />
