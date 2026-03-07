@@ -14,11 +14,11 @@ export default function OnboardingPage() {
     const router = useRouter();
 
     const [formData, setFormData] = useState({
-        name: "",
-        phone: "",
+        fullName: "",
+        phoneNumber: "",
         farmName: "",
         location: "",
-        pondCount: "1",
+        pondCount: 1,
     });
 
     const [loading, setLoading] = useState(false);
@@ -26,19 +26,19 @@ export default function OnboardingPage() {
     useEffect(() => {
         if (profile) {
             setFormData({
-                name: profile.name || "",
-                phone: profile.phone || "",
-                farmName: profile.farmName || "مزرعتي",
-                location: profile.location || "مصر",
-                pondCount: profile.pondCount || "1",
+                fullName: profile.fullName || "",
+                phoneNumber: profile.phoneNumber || "",
+                farmName: profile.farm?.name || t("مزرعتي", "My Farm"),
+                location: profile.farm?.location || t("مصر", "Egypt"),
+                pondCount: profile.farm?.pondCount || 1,
             });
 
             // If already completed, redirect to landing
-            if (profile.hasCompletedOnboarding) {
+            if (profile.profileCompleted) {
                 router.push("/landing");
             }
         }
-    }, [profile, router]);
+    }, [profile, router, t]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -48,14 +48,20 @@ export default function OnboardingPage() {
         try {
             const userRef = ref(database, `users/${profile.uid}`);
             await update(userRef, {
-                ...formData,
-                hasCompletedOnboarding: true,
+                fullName: formData.fullName,
+                phoneNumber: formData.phoneNumber,
+                profileCompleted: true,
+                farm: {
+                    name: formData.farmName,
+                    location: formData.location,
+                    pondCount: Number(formData.pondCount),
+                }
             });
             await refreshUser();
             router.push("/landing");
         } catch (error) {
             console.error("Onboarding error:", error);
-            alert("حدث خطأ أثناء حفظ البيانات، يرجى المحاولة مرة أخرى.");
+            alert(t("حدث خطأ أثناء حفظ البيانات، يرجى المحاولة مرة أخرى.", "An error occurred while saving data, please try again."));
         } finally {
             setLoading(false);
         }
@@ -82,8 +88,8 @@ export default function OnboardingPage() {
                         <input
                             type="text"
                             placeholder={t("الاسم الكامل", "Full Name")}
-                            value={formData.name}
-                            onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                            value={formData.fullName}
+                            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
                             required
                             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl py-3 pr-10 pl-4 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] transition-all"
                         />
@@ -93,8 +99,8 @@ export default function OnboardingPage() {
                         <input
                             type="tel"
                             placeholder={t("رقم الهاتف", "Phone Number")}
-                            value={formData.phone}
-                            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                            value={formData.phoneNumber}
+                            onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
                             required
                             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl py-3 pr-10 pl-4 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] transition-all"
                         />
@@ -134,7 +140,7 @@ export default function OnboardingPage() {
                             min="1"
                             placeholder={t("عدد الأحواض", "Number of Ponds")}
                             value={formData.pondCount}
-                            onChange={(e) => setFormData({ ...formData, pondCount: e.target.value })}
+                            onChange={(e) => setFormData({ ...formData, pondCount: Number(e.target.value) })}
                             required
                             className="w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl py-3 pr-10 pl-4 text-sm text-[var(--color-text-primary)] focus:outline-none focus:border-[var(--color-cyan-dark)] transition-all"
                         />
