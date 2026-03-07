@@ -28,21 +28,32 @@ export default function ReportsPage() {
     const handleExportPDF = async () => {
         setExporting(true);
         try {
-            // Create a professional farm-wide report
-            generateFarmPDF({
-                period: period === "weekly" ? t("أسبوعي", "Weekly") : t("شهري", "Monthly"),
-                totalProduction: data.summaryStats.totalProduction,
-                fcr: data.summaryStats.fcr,
-                waterQuality: data.summaryStats.waterQuality,
-                activeAlerts: data.summaryStats.activeAlerts,
-                ponds: data.pondPerformance.map(p => ({
-                    id: p.id,
-                    health: p.health,
-                    feed: p.feed,
-                    growth: p.growth,
-                    status: p.status
-                }))
-            });
+            const { database } = await import("@/lib/firebase");
+            const { ref, get } = await import("firebase/database");
+            const { generatePondPDF } = await import("@/lib/generatePDF");
+
+            const snap = await get(ref(database, "ponds"));
+            if (snap.exists()) {
+                const pondsData = snap.val();
+                const pondIds = Object.keys(pondsData);
+
+                for (const id of pondIds) {
+                    const p = pondsData[id];
+                    const hist = p.history?.readings ? Object.values(p.history.readings).sort((a: any, b: any) =>
+                        new Date(a.time).getTime() - new Date(b.time).getTime()
+                    ).slice(-12) as any[] : [];
+
+                    generatePondPDF({
+                        pondId: id,
+                        pondName: id.replace("_", " ").replace(/\b\w/g, l => l.toUpperCase()),
+                        current: p.current || { Temperature: 0, PH: 0, Ammonia: 0, DO: 0, timestamp: "" },
+                        aiStatus: p.ai_result?.current?.Status || "Unknown",
+                        aiReason: p.ai_result?.current?.Reason || "",
+                        aiConfidence: p.ai_result?.current?.AI_Confidence || "",
+                        history: hist
+                    });
+                }
+            }
 
             setExportDone(true);
             setTimeout(() => setExportDone(false), 3000);

@@ -17,50 +17,108 @@ export function generatePondPDF(pond: PondReportData) {
     const dateStr = now.toLocaleDateString("en-GB");
     const timeStr = now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
 
-    // ===== HEADER =====
-    doc.setFillColor(10, 14, 26);
-    doc.rect(0, 0, 210, 45, "F");
+    // Helper: draw charts like Python's matplotlib
+    const drawChart = (x: number, y: number, w: number, h: number, title: string, data: number[], color: [number, number, number], limit?: number) => {
+        doc.setFillColor(245, 245, 245);
+        doc.roundedRect(x, y, w, h, 2, 2, "F");
 
+        doc.setDrawColor(200);
+        doc.rect(x, y, w, h);
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(9);
+        doc.setTextColor(44, 62, 80);
+        doc.text(title, x + 5, y + 8);
+
+        if (data.length < 2) return;
+
+        const pad = 10;
+        const chartW = w - pad * 2;
+        const chartH = h - pad * 2 - 5;
+        const chartX = x + pad;
+        const chartY = y + pad + 10;
+
+        const minVal = Math.min(...data, limit || 999) * 0.9;
+        const maxVal = Math.max(...data, limit || -999) * 1.1;
+        const range = maxVal - minVal || 1;
+
+        // Draw grid
+        doc.setDrawColor(230);
+        doc.setLineWidth(0.1);
+        for (let i = 0; i <= 4; i++) {
+            const gy = chartY + chartH - (i * chartH / 4);
+            doc.line(chartX, gy, chartX + chartW, gy);
+        }
+
+        // Draw Limit line if exists
+        if (limit !== undefined) {
+            const limitY = chartY + chartH - ((limit - minVal) / range) * chartH;
+            if (limitY >= chartY && limitY <= chartY + chartH) {
+                doc.setDrawColor(231, 76, 60);
+                doc.setLineWidth(0.3);
+                doc.setLineDashPattern([2, 1], 0);
+                doc.line(chartX, limitY, chartX + chartW, limitY);
+                doc.setLineDashPattern([], 0);
+            }
+        }
+
+        // Draw Data Line
+        doc.setDrawColor(...color);
+        doc.setLineWidth(0.6);
+        for (let i = 0; i < data.length - 1; i++) {
+            const x1 = chartX + (i * chartW / (data.length - 1));
+            const y1 = chartY + chartH - ((data[i] - minVal) / range) * chartH;
+            const x2 = chartX + ((i + 1) * chartW / (data.length - 1));
+            const y2 = chartY + chartH - ((data[i + 1] - minVal) / range) * chartH;
+            doc.line(x1, y1, x2, y2);
+
+            // Draw points
+            doc.setFillColor(...color);
+            doc.circle(x1, y1, 0.8, "F");
+            if (i === data.length - 2) doc.circle(x2, y2, 0.8, "F");
+        }
+    };
+
+    // ===== HEADER (Python Style) =====
+    // logo.png replacement with placeholder if not found (can't check fs easily, usually logo is in base64 or url)
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.setTextColor(0, 212, 170);
-    doc.text("AquaSmart AI System", 105, 18, { align: "center" });
+    doc.setFontSize(24);
+    doc.setTextColor(44, 62, 80);
+    doc.text("AquaSmart AI System", 105, 20, { align: "center" });
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
-    doc.setTextColor(136, 153, 170);
-    doc.text("Comprehensive Water Quality Analysis Report", 105, 26, { align: "center" });
+    doc.setFontSize(11);
+    doc.setTextColor(127, 140, 141);
+    doc.text("Comprehensive Water Quality Analysis Report", 105, 28, { align: "center" });
 
-    doc.setFontSize(9);
-    doc.text(`Date: ${dateStr}  |  Time: ${timeStr}`, 105, 34, { align: "center" });
-
-    doc.setDrawColor(0, 212, 170);
+    doc.setDrawColor(44, 62, 80);
     doc.setLineWidth(0.5);
-    doc.line(15, 44, 195, 44);
+    doc.line(10, 38, 200, 38);
 
     // ===== POND INFO =====
-    let y = 55;
+    let currentY = 50;
+    doc.setFontSize(12);
     doc.setFont("helvetica", "bold");
-    doc.setFontSize(14);
-    doc.setTextColor(44, 62, 80);
-    doc.text(`Target: ${pond.pondName}`, 15, y);
+    doc.setTextColor(0, 0, 0);
+    doc.text(`Target: ${pond.pondName}   |   Date: ${dateStr}`, 15, currentY);
 
+    currentY += 8;
     const isReal = pond.history.length > 0;
     doc.setFont("helvetica", "italic");
     doc.setFontSize(10);
     doc.setTextColor(100, 100, 100);
-    doc.text(`Data Source: ${isReal ? "(LIVE SENSOR DATA)" : "(SIMULATED DATA)"}`, 15, y + 7);
+    doc.text(`Data Source: ${isReal ? "(LIVE SENSOR DATA)" : "(SIMULATED DATA)"}   |   Time: ${timeStr} Export`, 15, currentY);
 
     // ===== 1. AI EXECUTIVE SUMMARY =====
-    y += 20;
+    currentY += 12;
     doc.setFillColor(236, 240, 241);
-    doc.rect(15, y, 180, 10, "F");
+    doc.rect(15, currentY, 180, 10, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(44, 62, 80);
-    doc.text("  1. AI Executive Summary", 15, y + 7);
+    doc.text("  1. AI Executive Summary", 15, currentY + 7);
 
-    y += 15;
+    currentY += 15;
     const statuses = pond.history.map((h) => h.status || "").join(" ");
     let aiMsg: string;
     let msgColor: [number, number, number];
@@ -70,49 +128,44 @@ export function generatePondPDF(pond: PondReportData) {
     } else if (statuses.includes("Warning")) {
         aiMsg = "WARNING: System stability is fluctuating. Some parameters are approaching unsafe limits. Increase monitoring frequency.";
         msgColor = [243, 156, 18];
-    } else {
+    } else if (statuses.includes("Safe")) {
         aiMsg = "OPTIMAL: All water quality parameters are within safe ranges. The ecosystem is stable and healthy.";
         msgColor = [39, 174, 96];
+    } else {
+        aiMsg = pond.aiStatus ? `SYSTEM STATUS: ${pond.aiStatus}.` : "STATUS: No anomalies detected in current cycle.";
+        msgColor = [52, 73, 94];
     }
 
     doc.setFont("helvetica", "normal");
-    doc.setFontSize(10);
+    doc.setFontSize(11);
     doc.setTextColor(...msgColor);
     const splitMsg = doc.splitTextToSize(aiMsg, 170);
-    doc.text(splitMsg, 20, y);
-    y += splitMsg.length * 5 + 5;
-
-    if (pond.aiReason) {
-        doc.setTextColor(80, 80, 80);
-        doc.setFontSize(9);
-        doc.text(`AI Reason: ${pond.aiReason}`, 20, y);
-        y += 5;
-        doc.text(`AI Confidence: ${pond.aiConfidence}`, 20, y);
-        y += 10;
-    }
+    doc.text(splitMsg, 20, currentY);
+    currentY += splitMsg.length * 6 + 5;
 
     // ===== 2. KEY STATISTICS =====
     doc.setFillColor(236, 240, 241);
-    doc.rect(15, y, 180, 10, "F");
+    doc.rect(15, currentY, 180, 10, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(44, 62, 80);
-    doc.text("  2. Key Statistics", 15, y + 7);
-    y += 15;
+    doc.text("  2. Key Statistics", 15, currentY + 7);
+    currentY += 15;
 
-    const c = pond.current;
     const hist = pond.history;
+    const getStats = (vals: number[]) => {
+        if (vals.length === 0) return { min: "N/A", max: "N/A", avg: "N/A" };
+        return {
+            min: Math.min(...vals).toFixed(1),
+            max: Math.max(...vals).toFixed(1),
+            avg: (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1),
+        };
+    };
 
-    const getStats = (vals: number[]) => ({
-        min: Math.min(...vals).toFixed(1),
-        max: Math.max(...vals).toFixed(1),
-        avg: (vals.reduce((a, b) => a + b, 0) / vals.length).toFixed(1),
-    });
-
-    const temps = hist.length > 0 ? hist.map((h) => h.T) : [c.Temperature];
-    const phs = hist.length > 0 ? hist.map((h) => h.pH) : [c.PH];
-    const nh3s = hist.length > 0 ? hist.map((h) => h.NH3) : [c.Ammonia];
-    const dos = hist.length > 0 ? hist.map((h) => h.DO) : [c.DO];
+    const temps = hist.map((h) => h.T);
+    const phs = hist.map((h) => h.pH);
+    const nh3s = hist.map((h) => h.NH3);
+    const dos = hist.map((h) => h.DO);
 
     const tStats = getStats(temps);
     const phStats = getStats(phs);
@@ -120,113 +173,99 @@ export function generatePondPDF(pond: PondReportData) {
     const doStats = getStats(dos);
 
     autoTable(doc, {
-        startY: y,
+        startY: currentY,
         head: [["Parameter", "Min", "Max", "Average", "Current"]],
         body: [
-            ["Temperature (°)", tStats.min, tStats.max, tStats.avg, c.Temperature?.toFixed(1) || "--"],
-            ["Power of hydrogen (PH)", phStats.min, phStats.max, phStats.avg, c.PH?.toFixed(1) || "--"],
-            ["Ammonia (NH3)", nh3Stats.min, nh3Stats.max, nh3Stats.avg, c.Ammonia?.toFixed(2) || "--"],
-            ["Dissolved Oxygen (DO)", doStats.min, doStats.max, doStats.avg, c.DO?.toFixed(1) || "--"],
+            ["Temperature (C)", tStats.min, tStats.max, tStats.avg, pond.current.Temperature?.toFixed(1) || "--"],
+            ["Acidity (PH)", phStats.min, phStats.max, phStats.avg, pond.current.PH?.toFixed(1) || "--"],
+            ["Ammonia (NH3)", nh3Stats.min, nh3Stats.max, nh3Stats.avg, pond.current.Ammonia?.toFixed(2) || "--"],
+            ["Oxygen (DO)", doStats.min, doStats.max, doStats.avg, pond.current.DO?.toFixed(1) || "--"],
         ],
         theme: "grid",
-        styles: { fontSize: 9, cellPadding: 3 },
-        headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: "bold" },
-        alternateRowStyles: { fillColor: [245, 245, 245] },
+        styles: { fontSize: 9, cellPadding: 3, halign: "center" },
+        headStyles: { fillColor: [44, 62, 80], textColor: 255 },
+        columnStyles: { 0: { halign: "left", fontStyle: "bold" } },
         margin: { left: 15, right: 15 },
     });
 
-    y = (doc as any).lastAutoTable.finalY + 10;
+    currentY = (doc as any).lastAutoTable.finalY + 15;
 
-    // ===== 3. CURRENT READINGS VISUAL =====
+    // ===== 3. VISUAL TRENDS ANALYSIS (New Section) =====
     doc.setFillColor(236, 240, 241);
-    doc.rect(15, y, 180, 10, "F");
+    doc.rect(15, currentY, 180, 10, "F");
     doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
     doc.setTextColor(44, 62, 80);
-    doc.text("  3. Current Sensor Readings", 15, y + 7);
-    y += 18;
+    doc.text("  3. Visual Trends Analysis", 15, currentY + 7);
+    currentY += 15;
 
-    const drawGauge = (x: number, label: string, value: number, unit: string, safe: boolean) => {
-        doc.setFillColor(safe ? 39 : 231, safe ? 174 : 76, safe ? 96 : 60);
-        doc.roundedRect(x, y, 40, 30, 3, 3, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(16);
-        doc.setTextColor(255, 255, 255);
-        doc.text(`${value}`, x + 20, y + 14, { align: "center" });
-        doc.setFontSize(8);
-        doc.text(unit, x + 20, y + 20, { align: "center" });
-        doc.setFontSize(7);
-        doc.setTextColor(200, 200, 200);
-        doc.text(label, x + 20, y + 27, { align: "center" });
-    };
+    // Draw 4 charts in grid (2x2)
+    const cw = 85;
+    const ch = 40;
 
-    const isTempSafe = c.Temperature >= 24 && c.Temperature <= 32;
-    const isPhSafe = c.PH >= 6.5 && c.PH <= 8.5;
-    const isNh3Safe = c.Ammonia <= 0.5;
-    const isDoSafe = c.DO >= 5.0;
-
-    drawGauge(20, "Temperature (°)", Number(c.Temperature?.toFixed(1)), "", isTempSafe);
-    drawGauge(65, "Power of hydrogen (PH)", Number(c.PH?.toFixed(1)), "", isPhSafe);
-    drawGauge(110, "Ammonia (NH3)", Number(c.Ammonia?.toFixed(2)), "", isNh3Safe);
-    drawGauge(155, "Dissolved Oxygen (DO)", Number(c.DO?.toFixed(1)), "", isDoSafe);
-
-    y += 40;
-
-    // ===== 4. HOURLY LOGS =====
-    if (hist.length > 0) {
-        if (y > 200) { doc.addPage(); y = 20; }
-
-        doc.setFillColor(236, 240, 241);
-        doc.rect(15, y, 180, 10, "F");
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(12);
-        doc.setTextColor(44, 62, 80);
-        doc.text("  4. Detailed Hourly Logs", 15, y + 7);
-        y += 15;
-
-        const tableBody = hist.slice(-20).map((h) => {
-            const timeStr = h.time?.split(" ")[1]?.substring(0, 5) || h.time || "--";
-            return [timeStr, String(h.T), String(h.pH), String(h.NH3), String(h.DO), h.status || "Pending"];
-        });
-
-        autoTable(doc, {
-            startY: y,
-            head: [["Time", "Temp°C", "pH", "NH3", "DO", "AI Status"]],
-            body: tableBody,
-            theme: "grid",
-            styles: { fontSize: 8, cellPadding: 2 },
-            headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: "bold" },
-            bodyStyles: { textColor: [0, 0, 0] },
-            didParseCell: (data: any) => {
-                if (data.section === "body" && data.column.index === 5) {
-                    const val = String(data.cell.raw);
-                    if (val.includes("Danger")) {
-                        data.cell.styles.fillColor = [231, 76, 60];
-                        data.cell.styles.textColor = 255;
-                    } else if (val.includes("Warning")) {
-                        data.cell.styles.fillColor = [241, 196, 15];
-                        data.cell.styles.textColor = 0;
-                    } else if (val.includes("Safe")) {
-                        data.cell.styles.fillColor = [39, 174, 96];
-                        data.cell.styles.textColor = 255;
-                    }
-                }
-            },
-            margin: { left: 15, right: 15 },
-        });
+    if (currentY + ch * 2 + 10 > 280) {
+        doc.addPage();
+        currentY = 20;
     }
 
-    // ===== FOOTER =====
+    drawChart(15, currentY, cw, ch, "Temperature Trends", temps, [230, 126, 34]);
+    drawChart(110, currentY, cw, ch, "pH Level Analysis", phs, [142, 68, 173]);
+    currentY += ch + 5;
+    drawChart(15, currentY, cw, ch, "Ammonia (NH3) Stability", nh3s, [192, 57, 43], 0.8);
+    drawChart(110, currentY, cw, ch, "Dissolved Oxygen (DO)", dos, [41, 128, 185], 4.2);
+
+    currentY += ch + 15;
+
+    // ===== 4. DETAILED HOURLY LOGS =====
+    if (currentY > 230) {
+        doc.addPage();
+        currentY = 20;
+    }
+
+    doc.setFillColor(236, 240, 241);
+    doc.rect(15, currentY, 180, 10, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.setTextColor(44, 62, 80);
+    doc.text("  4. Detailed Hourly Logs", 15, currentY + 7);
+    currentY += 15;
+
+    const tableBody = hist.slice(-12).map((h) => {
+        const tVal = h.time?.includes(" ") ? h.time.split(" ")[1].substring(0, 5) : h.time;
+        return [tVal, String(h.T), String(h.pH), String(h.NH3), String(h.DO), h.status || "Pending"];
+    });
+
+    autoTable(doc, {
+        startY: currentY,
+        head: [["Time", "Temp", "pH", "NH3", "DO", "AI Status"]],
+        body: tableBody,
+        theme: "grid",
+        styles: { fontSize: 8, cellPadding: 2, halign: "center" },
+        headStyles: { fillColor: [44, 62, 80], textColor: 255, fontStyle: "bold" },
+        didParseCell: (dataCell: any) => {
+            if (dataCell.section === "body" && dataCell.column.index === 5) {
+                const val = String(dataCell.cell.raw);
+                if (val.includes("Danger")) {
+                    dataCell.cell.styles.fillColor = [231, 76, 60];
+                    dataCell.cell.styles.textColor = 255;
+                } else if (val.includes("Warning")) {
+                    dataCell.cell.styles.fillColor = [241, 196, 15];
+                    dataCell.cell.styles.textColor = 0;
+                }
+            }
+        },
+        margin: { left: 15, right: 15 },
+    });
+
+    // FOOTER
     const pageCount = doc.getNumberOfPages();
     for (let i = 1; i <= pageCount; i++) {
         doc.setPage(i);
         doc.setFont("helvetica", "italic");
         doc.setFontSize(8);
-        doc.setTextColor(128, 128, 128);
-        doc.text(`Page ${i} of ${pageCount} | Generated by AquaSmart AI`, 105, 290, { align: "center" });
+        doc.setTextColor(128);
+        doc.text(`Page ${i} of ${pageCount} | AquaSmart AI Intelligence System`, 105, 290, { align: "center" });
     }
 
-    // ===== DOWNLOAD =====
-    const fileName = `AquaSmart_Report_${pond.pondId}_${now.toISOString().split("T")[0]}.pdf`;
-    doc.save(fileName);
+    doc.save(`AquaSmart_Detailed_Report_${pond.pondId}_${now.getTime()}.pdf`);
 }
