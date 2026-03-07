@@ -4,6 +4,7 @@ import { User, Bell, Shield, Sparkles, LogOut, Save, X, Settings as Cog } from "
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/auth/AuthProvider";
 import { PageTransition } from "@/components/motion/PageTransition";
 
 const defaultProfile = {
@@ -20,24 +21,40 @@ const defaultNotifs = { system: true, daily: true, marketing: false };
 export default function SettingsPage() {
     const { t, lang, setUserName, lowPowerMode, setLowPowerMode } = useApp();
     const router = useRouter();
+    const { profile: authProfile } = useAuth();
+
     const [notifications, setNotifications] = useState(defaultNotifs);
     const [saving, setSaving] = useState(false);
     const [saved, setSaved] = useState(false);
-    const [profile, setProfile] = useState(defaultProfile);
+
+    // Initialize with authProfile if available, otherwise fallback
+    const [profile, setProfile] = useState({
+        name: authProfile?.name || defaultProfile.name,
+        email: authProfile?.email || defaultProfile.email,
+        phone: authProfile?.phone || defaultProfile.phone,
+        farmName: authProfile?.farmName || defaultProfile.farmName,
+        location: authProfile?.location || defaultProfile.location,
+        pondCount: authProfile?.pondCount || defaultProfile.pondCount,
+    });
+
+    // Update profile state when authenticaton profile loads
+    useEffect(() => {
+        if (authProfile) {
+            setProfile(prev => ({
+                ...prev,
+                name: authProfile.name || prev.name,
+                email: authProfile.email || prev.email,
+                phone: authProfile.phone || prev.phone,
+                farmName: authProfile.farmName || prev.farmName,
+                location: authProfile.location || prev.location,
+                pondCount: authProfile.pondCount || prev.pondCount,
+            }));
+        }
+    }, [authProfile]);
 
     // Load saved data from localStorage on mount
     useEffect(() => {
         try {
-            const savedProfile = localStorage.getItem("aquasmart_profile");
-            if (savedProfile) {
-                setProfile(JSON.parse(savedProfile));
-            } else {
-                setProfile({
-                    ...defaultProfile,
-                    name: t("أحمد محمد", "Ahmed Mohamed"),
-                    location: t("كفر الشيخ، مصر", "Kafr El-Sheikh, Egypt")
-                });
-            }
             const savedNotifs = localStorage.getItem("aquasmart_notifs");
             if (savedNotifs) setNotifications(JSON.parse(savedNotifs));
         } catch { }
@@ -50,21 +67,22 @@ export default function SettingsPage() {
             if (prev.location === "كفر الشيخ، مصر" || prev.location === "Kafr El-Sheikh, Egypt") {
                 updated.location = t("كفر الشيخ، مصر", "Kafr El-Sheikh, Egypt");
             }
-            if (prev.name === "أحمد محمد" || prev.name === "Ahmed Mohamed") {
+            if (!authProfile?.name && (prev.name === "أحمد محمد" || prev.name === "Ahmed Mohamed")) {
                 updated.name = t("أحمد محمد", "Ahmed Mohamed");
             }
             return updated;
         });
-    }, [lang]); // explicitly ONLY map lang to prevent t() infinite loops
+    }, [lang, t, authProfile]);
 
     const handleSave = async () => {
         setSaving(true);
+        // Simulate save - In a real app we would update Firebase Realtime Database here
         await new Promise((r) => setTimeout(r, 1200));
-        // Persist to localStorage
-        localStorage.setItem("aquasmart_profile", JSON.stringify(profile));
+
         localStorage.setItem("aquasmart_notifs", JSON.stringify(notifications));
         // Update global context so name changes everywhere
         setUserName(profile.name);
+
         setSaving(false);
         setSaved(true);
         setTimeout(() => setSaved(false), 3000);
@@ -74,7 +92,6 @@ export default function SettingsPage() {
         const { signOut } = await import("firebase/auth");
         const { auth } = await import("@/lib/firebase");
         await signOut(auth);
-        localStorage.removeItem("aquasmart_profile");
         localStorage.removeItem("aquasmart_notifs");
         router.push("/login");
     };
