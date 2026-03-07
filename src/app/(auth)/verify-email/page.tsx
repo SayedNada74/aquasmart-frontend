@@ -23,7 +23,7 @@ export default function VerifyEmailPage() {
             router.replace("/login");
         }
         if (!authLoading && isVerified) {
-            router.replace("/landing");
+            router.replace("/dashboard");
         }
     }, [user, isVerified, authLoading, router]);
 

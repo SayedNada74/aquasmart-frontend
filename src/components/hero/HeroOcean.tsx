@@ -5,7 +5,13 @@ import Link from "next/link";
 import { ChevronLeft, Play } from "lucide-react";
 import { useApp } from "@/lib/AppContext";
 
-export function HeroOcean() {
+interface HeroOceanProps {
+    onStartClick?: (e: React.MouseEvent) => void;
+    onDashboardClick?: (e: React.MouseEvent) => void;
+    onPresentationClick?: (e: React.MouseEvent) => void;
+}
+
+export function HeroOcean({ onStartClick, onDashboardClick, onPresentationClick }: HeroOceanProps) {
     const { t, lang } = useApp();
     return (
         <section className="relative min-h-[92vh] overflow-hidden rounded-b-3xl mb-12">
@@ -46,11 +52,11 @@ export function HeroOcean() {
                     </div>
 
                     <div className="flex items-center justify-center gap-4 flex-wrap">
-                        <Link href="/" className="btn-primary px-8 py-3.5 text-base flex items-center gap-2 shadow-lg shadow-[var(--color-cyan-glow)] focus:ring-2 focus:ring-[var(--color-cyan-dark)]">
+                        <button onClick={onStartClick} className="btn-primary px-8 py-3.5 text-base flex items-center gap-2 shadow-lg shadow-[var(--color-cyan-glow)] focus:ring-2 focus:ring-[var(--color-cyan-dark)]">
                             {t("ابدأ تجربتك الآن", "Start your experience now")}
                             <ChevronLeft className={`w-5 h-5 ${lang === "en" ? "rotate-180" : ""}`} />
-                        </Link>
-                        <button className="btn-secondary bg-[var(--color-bg-primary)]/50 backdrop-blur-sm px-8 py-3.5 text-base flex items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-primary)]/80 focus:ring-2 focus:ring-[var(--color-cyan-dark)]">
+                        </button>
+                        <button onClick={onPresentationClick} className="btn-secondary bg-[var(--color-bg-primary)]/50 backdrop-blur-sm px-8 py-3.5 text-base flex items-center gap-2 border border-[var(--color-border)] hover:bg-[var(--color-bg-primary)]/80 focus:ring-2 focus:ring-[var(--color-cyan-dark)]">
                             <Play className="w-5 h-5 text-[var(--color-cyan-dark)]" />
                             {t("عرض تقديمي للنظام", "System Presentation")}
                         </button>

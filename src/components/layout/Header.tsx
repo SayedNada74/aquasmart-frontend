@@ -19,10 +19,10 @@ export function Header({ onMenuToggle }: HeaderProps) {
     const notifRef = useRef<HTMLDivElement>(null);
     const profileRef = useRef<HTMLDivElement>(null);
 
-    if (pathname === "/login" || pathname === "/landing") return null;
+    if (pathname === "/login" || pathname === "/") return null;
 
     const pageNames: Record<string, string> = {
-        "/": t("لوحة القيادة", "Dashboard"),
+        "/dashboard": t("لوحة القيادة", "Dashboard"),
         "/ponds": t("الأحواض", "Ponds"),
         "/sensors": t("المستشعرات", "Sensors"),
         "/ai-center": t("مركز الذكاء الاصطناعي", "AI Center"),

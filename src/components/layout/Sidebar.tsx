@@ -21,10 +21,10 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     const router = useRouter();
     const { t, lang, setLang, theme, setTheme, userName, userRole } = useApp();
 
-    if (pathname === "/login" || pathname === "/landing") return null;
+    if (pathname === "/login" || pathname === "/") return null;
 
     const navItems: PillNavItem[] = [
-        { id: "/", label: t("لوحة القيادة", "Dashboard"), href: "/", icon: <LayoutGrid className="w-5 h-5" /> },
+        { id: "/dashboard", label: t("لوحة القيادة", "Dashboard"), href: "/dashboard", icon: <LayoutGrid className="w-5 h-5" /> },
         { id: "/ponds", label: t("الأحواض", "Ponds"), href: "/ponds", icon: <Waves className="w-5 h-5" /> },
         { id: "/sensors", label: t("المستشعرات", "Sensors"), href: "/sensors", icon: <Radio className="w-5 h-5" /> },
         { id: "/ai-center", label: t("مركز الذكاء الاصطناعي", "AI Center"), href: "/ai-center", icon: <Sparkles className="w-5 h-5" /> },
@@ -43,7 +43,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     const sidebarContent = (
         <>
             {/* Logo */}
-            <Link href="/" onClick={() => onClose?.()} className="h-16 md:h-20 flex items-center justify-center gap-3 border-b border-[var(--color-border)] px-4 hover:bg-[var(--color-bg-card-hover)] transition-colors">
+            <Link href="/dashboard" onClick={() => onClose?.()} className="h-16 md:h-20 flex items-center justify-center gap-3 border-b border-[var(--color-border)] px-4 hover:bg-[var(--color-bg-card-hover)] transition-colors">
                 <img src="/logo.png" alt="AquaSmart" className="w-14 h-14 md:w-20 md:h-20 rounded-2xl shadow-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
                 <div className={lang === "ar" ? "text-right" : "text-left"}>
                     <h1 className="text-sm md:text-base font-bold text-[var(--color-text-primary)] leading-tight">{t("أكوا سمارت", "AquaSmart")}</h1>
@@ -73,7 +73,7 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
                 />
 
                 {/* Landing Page Link */}
-                <Link href="/landing" onClick={() => onClose?.()} className="sidebar-link mt-2 border-t border-[var(--color-border)] pt-3">
+                <Link href="/" onClick={() => onClose?.()} className="sidebar-link mt-2 border-t border-[var(--color-border)] pt-3">
                     <Home className="w-5 h-5 text-[var(--color-text-muted)]" />
                     <span className="text-sm">{t("الصفحة التعريفية", "About Us")}</span>
                 </Link>

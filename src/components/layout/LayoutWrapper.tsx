@@ -15,12 +15,12 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    // Provide an array of public or auth-related full-page routes
-    const isFullPage = pathname === "/login" || pathname === "/landing" || pathname === "/register" || pathname === "/verify-email" || pathname === "/forgot-password";
+    // Landing page (root) and other full-page auth routes
+    const isFullPage = pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/verify-email" || pathname === "/forgot-password";
 
     if (isFullPage) {
         return (
-            <div dir={dir} className="relative min-h-screen">
+            <div dir={dir} className="relative min-h-screen overflow-x-hidden">
                 <SiteBackground />
                 {children}
             </div>

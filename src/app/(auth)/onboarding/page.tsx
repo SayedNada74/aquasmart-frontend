@@ -35,7 +35,7 @@ export default function OnboardingPage() {
 
             // If already completed, redirect to landing
             if (profile.profileCompleted) {
-                router.push("/landing");
+                router.push("/dashboard");
             }
         }
     }, [profile, router, t]);
@@ -58,7 +58,7 @@ export default function OnboardingPage() {
                 }
             });
             await refreshUser();
-            router.push("/landing");
+            router.push("/dashboard");
         } catch (error) {
             console.error("Onboarding error:", error);
             alert(t("حدث خطأ أثناء حفظ البيانات، يرجى المحاولة مرة أخرى.", "An error occurred while saving data, please try again."));

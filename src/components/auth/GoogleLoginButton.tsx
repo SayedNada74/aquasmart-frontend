@@ -10,9 +10,10 @@ import { useApp } from "@/lib/AppContext";
 
 interface Props {
     onError: (err: string) => void;
+    redirectPath?: string;
 }
 
-export function GoogleLoginButton({ onError }: Props) {
+export function GoogleLoginButton({ onError, redirectPath = "/dashboard" }: Props) {
     const [loading, setLoading] = useState(false);
     const router = useRouter();
     const { t } = useApp();
@@ -30,7 +31,7 @@ export function GoogleLoginButton({ onError }: Props) {
             // Re-sync or create profile
             await createOrUpdateUserProfile(result.user, "google");
 
-            router.push("/landing");
+            router.push(redirectPath);
         } catch (err: any) {
             onError(getArabicAuthError(err?.code || ""));
         } finally {

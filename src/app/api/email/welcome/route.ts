@@ -37,12 +37,12 @@ export async function POST(req: Request) {
                             حسابك الآن جاهز. يمكنك البدء في استكشاف الميزات المتقدمة وتجربة المساعد الذكي لمضاعفة إنتاجك وتقليل الهدر!
                         </p>
                         <div style="text-align: center; margin: 40px 0;">
-                            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/landing" style="background-color: #0d9488; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(13, 148, 136, 0.25);">استكشف لوحة التحكم الآن</a>
+                            <a href="${process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'}/dashboard" style="background-color: #0d9488; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(13, 148, 136, 0.25);">استكشف لوحة التحكم الآن</a>
                         </div>
                         <p style="font-size: 14px; color: #9ca3af; text-align: center; margin-top: 40px; border-top: 1px solid #f3f4f6; padding-top: 30px;">
                             إذا كان لديك أي استفسار، فريق الدعم لدينا دائماً في خدمتك.<br/>
                             <br/>
-                            © 2024 AquaSmart AI. جميع الحقوق محفوظة.
+                            © 2024-2025 AquaSmart AI. جميع الحقوق محفوظة.
                         </p>
                     </div>
                 </div>

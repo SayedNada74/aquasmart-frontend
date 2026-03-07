@@ -1,8 +1,8 @@
 "use client";
 
 import { Mail, Lock, Eye, EyeOff, LogIn } from "lucide-react";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { auth } from "@/lib/firebase";
 import { signInWithEmailAndPassword } from "firebase/auth";
@@ -11,7 +11,7 @@ import { useApp } from "@/lib/AppContext";
 import { GoogleLoginButton } from "@/components/auth/GoogleLoginButton";
 import Link from "next/link";
 
-export default function LoginPage() {
+function LoginForm() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
@@ -19,7 +19,10 @@ export default function LoginPage() {
     const [error, setError] = useState("");
     const { refreshUser } = useAuth();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { t, lang } = useApp();
+
+    const redirectPath = searchParams.get("redirect") || "/dashboard";
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -36,14 +39,11 @@ export default function LoginPage() {
             await refreshUser();
 
             if (!userCred.user.emailVerified) {
-                // Not authenticated yet, AuthGate usually handles this but since we just logged in,
-                // sending directly to verify-email is faster UX.
                 router.push("/verify-email");
                 return;
             }
 
-            // Let AuthGate or explicit push take them to protected landing
-            router.push("/landing");
+            router.push(redirectPath);
         } catch (err: any) {
             setError(getArabicAuthError(err?.code || ""));
         } finally {
@@ -117,7 +117,7 @@ export default function LoginPage() {
                     <div className="flex-1 h-px bg-[var(--color-border)]" />
                 </div>
 
-                <GoogleLoginButton onError={setError} />
+                <GoogleLoginButton onError={setError} redirectPath={redirectPath} />
 
                 <p className="text-center text-xs text-[var(--color-text-muted)] mt-4">
                     {t("ليس لديك حساب؟", "Don't have an account?")}
@@ -127,5 +127,17 @@ export default function LoginPage() {
                 </p>
             </div>
         </form>
+    );
+}
+
+export default function LoginPage() {
+    return (
+        <Suspense fallback={
+            <div className="w-full card flex items-center justify-center p-12">
+                <div className="w-8 h-8 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
+            </div>
+        }>
+            <LoginForm />
+        </Suspense>
     );
 }

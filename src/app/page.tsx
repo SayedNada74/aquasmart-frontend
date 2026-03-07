@@ -1,248 +1,320 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { database } from "@/lib/firebase";
-import { ref, onValue } from "firebase/database";
-import {
-  LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
-} from "recharts";
-import {
-  Thermometer, Droplets, FlaskConical, Wind, Activity,
-  AlertTriangle, CheckCircle2, Clock, Sparkles, Waves, Radio,
-} from "lucide-react";
-import { useApp } from "@/lib/AppContext";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useState } from "react";
+import { Waves, Shield, BarChart3, Sparkles, ChevronLeft, CheckCircle2, Play, Cpu, Bell, TrendingUp, Store, FlaskConical, Thermometer, Droplets, Wind } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import { PageTransition } from "@/components/motion/PageTransition";
-import { MotionCard } from "@/components/motion/MotionCard";
+import { HeroOcean } from "@/components/hero/HeroOcean";
+import { AnimatedContent } from "@/components/animations/AnimatedContent";
+import { useApp } from "@/lib/AppContext";
+import { useAuth } from "@/lib/auth/AuthProvider";
+import { ContactModal } from "@/components/ui/ContactModal";
 
-interface PondCurrent { Temperature: number; PH: number; Ammonia: number; DO: number; timestamp: string; }
-interface PondAI { Status: string; Reason: string; AI_Confidence: string; }
-interface PondData { id: string; current: PondCurrent; ai: PondAI; history: any[]; }
+export default function LandingPage() {
+    const { t, lang } = useApp();
+    const { user } = useAuth();
+    const router = useRouter();
+    const [isContactOpen, setIsContactOpen] = useState(false);
 
-export default function DashboardPage() {
-  const { t, lang } = useApp();
-  const [ponds, setPonds] = useState<PondData[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [activePond, setActivePond] = useState("pond_1");
+    const handleDashboardClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        if (user) {
+            router.push("/dashboard");
+        } else {
+            router.push("/login?redirect=/dashboard");
+        }
+    };
 
-  useEffect(() => {
-    const pondsRef = ref(database, "ponds");
-    const unsub = onValue(pondsRef, (snap) => {
-      const data = snap.val();
-      if (data) {
-        const arr: PondData[] = Object.keys(data).map((key) => {
-          const p = data[key];
-          let hist: any[] = [];
-          if (p.history?.readings) {
-            hist = Object.values(p.history.readings)
-              .sort((a: any, b: any) => new Date(a.time).getTime() - new Date(b.time).getTime())
-              .slice(-20) as any[];
-          }
-          return { id: key, current: p.current || {} as PondCurrent, ai: p.ai_result?.current || {} as PondAI, history: hist };
-        });
-        setPonds(arr);
-      }
-      setLoading(false);
-    });
-    return () => unsub();
-  }, []);
+    const handleStartClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        router.push("/login?redirect=/dashboard");
+    };
 
-  if (loading) {
+    const handlePresentationClick = (e: React.MouseEvent) => {
+        e.preventDefault();
+        const featuresSection = document.getElementById("features");
+        if (featuresSection) {
+            featuresSection.scrollIntoView({ behavior: "smooth" });
+        }
+    };
+
+    const revenueData = [
+        { m: t("يناير", "Jan"), val: 45 },
+        { m: t("فبراير", "Feb"), val: 52 },
+        { m: t("مارس", "Mar"), val: 48 },
+        { m: t("أبريل", "Apr"), val: 60 },
+        { m: t("مايو", "May"), val: 55 },
+    ];
+
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="w-14 h-14 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
-      </div>
-    );
-  }
-
-  const active = ponds.find((p) => p.id === activePond) || ponds[0];
-  const totalPonds = ponds.length;
-
-  const calcSafety = (p: PondData) => {
-    if (!p?.current?.Temperature) return 0;
-    let score = 100;
-    if (p.current.Ammonia > 0.8) score -= 40; else if (p.current.Ammonia > 0.5) score -= 20;
-    if (p.current.DO < 4.2) score -= 30; else if (p.current.DO < 5) score -= 10;
-    if (p.current.Temperature > 32 || p.current.Temperature < 22) score -= 15;
-    if (p.current.PH < 6.5 || p.current.PH > 8.5) score -= 15;
-    return Math.max(0, score);
-  };
-
-  const safety = active ? calcSafety(active) : 0;
-  const safetyColor = safety >= 75 ? "#10b981" : safety >= 50 ? "#f59e0b" : "#ef4444";
-  const safetyText = safety >= 75 ? t("آمن", "Safe") : safety >= 50 ? t("تحذير", "Warning") : t("خطر", "Danger");
-  const waterQuality = safety >= 80 ? 92 : safety >= 50 ? 70 : 45;
-  const aiReason = active?.ai?.Reason || t("جميع المعايير ضمن النطاق الآمن. الحوض في حالة مستقرة.", "All parameters within safe range. Pond is stable.");
-
-  const tooltipStyle = { backgroundColor: "var(--color-bg-card)", borderColor: "var(--color-border)", color: "var(--color-text-primary)", borderRadius: "8px", fontSize: "12px" };
-
-  return (
-    <PageTransition>
-      <div className="space-y-6 pb-8">
-        {/* Stats Row */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {[
-            { label: t("إجمالي الأحواض", "Total Ponds"), value: totalPonds, icon: <Waves className="w-5 h-5 text-[var(--color-teal)]" />, iconBg: "bg-[var(--color-teal)]/10" },
-            { label: t("جودة المياه (AQI)", "Water Quality (AQI)"), value: `${waterQuality}%`, icon: <Droplets className="w-5 h-5 text-[var(--color-cyan)]" />, iconBg: "bg-[var(--color-cyan)]/10" },
-            { label: t("التنبيهات النشطة", "Active Alerts"), value: ponds.filter(p => p.ai?.Status?.includes("Danger")).length, icon: <AlertTriangle className="w-5 h-5 text-[#ef4444]" />, iconBg: "bg-[#ef4444]/10" },
-            { label: t("المهام المجدولة", "Scheduled Tasks"), value: "08", icon: <Clock className="w-5 h-5 text-[#3b82f6]" />, iconBg: "bg-[#3b82f6]/10" },
-          ].map((s, i) => (
-            <MotionCard key={i} className="stat-card">
-              <div className="flex-1">
-                <p className="text-xs text-[var(--color-text-secondary)]">{s.label}</p>
-                <p className="text-2xl font-bold text-[var(--color-text-primary)]">{s.value}</p>
-              </div>
-              <div className={`w-10 h-10 rounded-lg ${s.iconBg} flex items-center justify-center`}>{s.icon}</div>
-            </MotionCard>
-          ))}
-        </div>
-
-        {/* Pond Selector */}
-        <div className="flex items-center gap-3 flex-wrap">
-          <span className="text-sm text-[var(--color-text-secondary)]">{t("تغيير حوض", "Switch Pond")}</span>
-          <div className="flex gap-2 flex-wrap">
-            {ponds.map((p, i) => (
-              <button key={p.id} onClick={() => setActivePond(p.id)}
-                className={`px-4 py-1.5 rounded-lg text-sm font-medium transition-all ${activePond === p.id
-                  ? "bg-[var(--color-cyan)]/15 text-[var(--color-cyan)] border border-[var(--color-cyan)]/30"
-                  : "bg-[var(--color-bg-card)] text-[var(--color-text-secondary)] border border-[var(--color-border)] hover:border-[var(--color-cyan)]/30"}`}>
-                {t(`حوض ${i + 1}`, `Pond ${i + 1}`)}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
-          {/* Safety Gauge + Alerts */}
-          <div className="xl:col-span-1 space-y-6">
-            <MotionCard className="bg-gradient-to-br from-[var(--color-bg-card)] to-[var(--color-bg-input)] rounded-[var(--radius)] p-5 text-center shadow-[var(--card-shadow-base)] border border-[var(--color-border)]">
-              <h3 className="text-sm font-semibold text-[var(--color-text-secondary)] mb-4">{t("مستوى السلامة العام", "Overall Safety Level")}</h3>
-              <div className="relative w-40 h-40 mx-auto mb-4">
-                <svg className="w-full h-full -rotate-90" viewBox="0 0 120 120">
-                  <circle cx="60" cy="60" r="50" fill="none" stroke="var(--color-border)" strokeWidth="10" />
-                  <circle cx="60" cy="60" r="50" fill="none" stroke={safetyColor} strokeWidth="10" strokeLinecap="round"
-                    strokeDasharray={`${safety * 3.14} ${314 - safety * 3.14}`} className="transition-all duration-1000" />
-                </svg>
-                <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-bold text-[var(--color-text-primary)]">{safety}</span>
-                  <span className="text-sm text-[var(--color-text-secondary)]">{safetyText}</span>
-                </div>
-              </div>
-              <p className="text-xs text-[var(--color-text-muted)]">{t("تم تحليل جميع الأحواض بنجاح", "All ponds analyzed successfully")}</p>
-            </MotionCard>
-
-            <div className="card">
-              <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
-                <Clock className="w-4 h-4 text-[var(--color-text-secondary)]" />
-                {t("التنبيهات الأخيرة", "Recent Alerts")}
-              </h3>
-              <div className="space-y-3">
-                {ponds.filter(p => p.ai?.Status && !p.ai.Status.includes("Safe")).slice(0, 3).map((p, i) => (
-                  <div key={i} className="flex items-start gap-3 p-2 rounded-lg bg-[var(--color-bg-input)]">
-                    <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${p.ai.Status?.includes("Danger") ? "bg-[#ef4444]" : "bg-[#f59e0b]"}`} />
-                    <div className="flex-1">
-                      <p className="text-xs font-medium text-[var(--color-text-primary)]">{p.ai.Reason || t("تنبيه", "Alert")}</p>
-                      <p className="text-[10px] text-[var(--color-text-muted)] mt-0.5">{p.id.replace("_", " ")} • {t("منذ دقائق", "minutes ago")}</p>
+        <PageTransition>
+            <div className="min-h-screen text-[var(--color-text-primary)] bg-[var(--color-bg-base)]" dir={lang === "ar" ? "rtl" : "ltr"}>
+                {/* ===== NAV ===== */}
+                <nav className="flex items-center justify-between px-6 md:px-12 py-5 max-w-7xl mx-auto">
+                    <div className="flex items-center gap-3">
+                        <img src="/logo.png" alt="AquaSmart" className="w-16 h-16 rounded-2xl shadow-sm" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        <span className="text-2xl font-bold shadow-sm">AquaSmart</span>
                     </div>
-                  </div>
-                ))}
-                {ponds.filter(p => p.ai?.Status && !p.ai.Status.includes("Safe")).length === 0 && (
-                  <div className="flex items-center gap-2 text-[#10b981] text-sm">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>{t("لا توجد تنبيهات حالياً", "No alerts currently")}</span>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+                    <div className="hidden md:flex items-center gap-8 text-sm text-[var(--color-text-secondary)]">
+                        <a href="#features" className="hover:text-[var(--color-text-primary)] transition-colors">{t("المميزات", "Features")}</a>
+                        <a href="#ai" className="hover:text-[var(--color-text-primary)] transition-colors">{t("الذكاء الاصطناعي", "AI")}</a>
+                        <a href="#market" className="hover:text-[var(--color-text-primary)] transition-colors">{t("السوق", "Market")}</a>
+                        <button onClick={() => setIsContactOpen(true)} className="hover:text-[var(--color-text-primary)] transition-colors">{t("تواصل", "Contact")}</button>
+                    </div>
+                    <button onClick={handleDashboardClick} className="btn-primary px-5 py-2 text-sm">{t("لوحة التحكم", "Dashboard")}</button>
+                </nav>
 
-          {/* Sensor Data + Charts */}
-          <div className="xl:col-span-3 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Radio className="w-5 h-5 text-[var(--color-cyan)]" />
-              <h3 className="text-base font-bold text-[var(--color-text-primary)]">
-                {t(`بيانات الحوض المباشرة (#${activePond.replace("pond_", "")})`, `Live Pond Data (#${activePond.replace("pond_", "")})`)}
-              </h3>
-            </div>
+                {/* ===== HERO ===== */}
+                <HeroOcean
+                    onStartClick={handleStartClick}
+                    onDashboardClick={handleDashboardClick}
+                    onPresentationClick={handlePresentationClick}
+                />
 
-            {/* Sensor Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { label: t("درجة الحرارة (°)", "Temperature (°)"), val: active?.current?.Temperature?.toFixed(1), unit: "", icon: <Thermometer className="w-4 h-4 text-[#f59e0b]" />, bg: "bg-[#f59e0b]/10", color: "#f59e0b", key: "T", status: t("مستقر", "Stable") },
-                { label: t("قوة الهيدروجين (PH)", "Power of hydrogen (PH)"), val: active?.current?.PH?.toFixed(1), unit: "", icon: <FlaskConical className="w-4 h-4 text-[#3b82f6]" />, bg: "bg-[#3b82f6]/10", color: "#3b82f6", key: "pH", status: t("نطاق مثالي", "Optimal Range") },
-                { label: t("الأمونيا (NH3)", "Ammonia (NH3)"), val: active?.current?.Ammonia?.toFixed(2), unit: "", icon: <Wind className="w-4 h-4 text-[#ef4444]" />, bg: "bg-[#ef4444]/10", color: "#ef4444", key: "NH3", status: t("نسبة آمنة", "Safe Level") },
-                { label: t("الأكسجين المذاب (DO)", "Dissolved Oxygen (DO)"), val: active?.current?.DO?.toFixed(1), unit: "", icon: <Droplets className="w-4 h-4 text-[#14b8a6]" />, bg: "bg-[#14b8a6]/10", color: "#14b8a6", key: "DO", status: t("كافي", "Sufficient") },
-              ].map((s, i) => (
-                <MotionCard key={i} className="card">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className={`w-8 h-8 rounded-lg ${s.bg} flex items-center justify-center`}>{s.icon}</div>
-                    <span className="text-xs text-[var(--color-text-secondary)]">{s.label}</span>
-                  </div>
-                  <p className="text-3xl font-bold text-[var(--color-text-primary)]">{s.val || "--"}<span className="text-sm text-[var(--color-text-muted)] mr-1">{s.unit}</span></p>
-                  <div className="mt-3 h-12">
-                    {active?.history.length > 0 && (
-                      <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={active.history.slice(-10)}>
-                          <Line type="monotone" dataKey={s.key} stroke={s.color} strokeWidth={2} dot={false} />
-                        </LineChart>
-                      </ResponsiveContainer>
-                    )}
-                  </div>
-                  <p className="text-[10px] text-[var(--color-text-muted)] mt-1">{s.status}</p>
-                </MotionCard>
-              ))}
-            </div>
+                {/* ===== STATS ===== */}
+                <section className="max-w-7xl mx-auto px-6 md:px-12 py-12">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-6 max-w-4xl mx-auto text-center">
+                        {[
+                            { icon: <FlaskConical className="w-8 h-8 mx-auto mb-3 text-[#3b82f6]" />, label: t("قوة الهيدروجين (PH)", "Power of hydrogen (PH)") },
+                            { icon: <Thermometer className="w-8 h-8 mx-auto mb-3 text-[#f59e0b]" />, label: t("درجة الحرارة (°)", "Temperature (°)") },
+                            { icon: <Droplets className="w-8 h-8 mx-auto mb-3 text-[#14b8a6]" />, label: t("الأكسجين المذاب (DO)", "Dissolved Oxygen (DO)") },
+                            { icon: <Wind className="w-8 h-8 mx-auto mb-3 text-[#ef4444]" />, label: t("الأمونيا (NH3)", "Ammonia (NH3)") },
+                        ].map((s, i) => (
+                            <AnimatedContent key={i} delayMs={i * 120} className="h-full">
+                                <div className="p-4 rounded-xl bg-[var(--color-bg-input)] border border-[var(--color-border)] shadow-sm hover:border-[var(--color-cyan)]/30 transition-colors h-full flex flex-col justify-center items-center">
+                                    {s.icon}
+                                    <p className="text-sm font-semibold text-[var(--color-text-primary)] mt-1">{s.label}</p>
+                                </div>
+                            </AnimatedContent>
+                        ))}
+                    </div>
+                </section>
 
-            {/* AI Recommendation */}
-            <MotionCard className="bg-gradient-to-l from-[var(--color-cyan)]/10 to-transparent border border-[var(--color-cyan)]/20 rounded-xl p-5 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--color-cyan)]/10 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6 text-[var(--color-cyan)]" />
-              </div>
-              <div className="flex-1">
-                <h4 className="text-sm font-bold text-[var(--color-cyan)] mb-1">{t("توصية الذكاء الاصطناعي", "AI Recommendation")}</h4>
-                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{aiReason}</p>
-              </div>
-            </MotionCard>
+                {/* ===== FEATURES (المميزات) ===== */}
+                <section id="features" className="max-w-7xl mx-auto px-6 md:px-12 py-20">
+                    <div className="text-center mb-14">
+                        <AnimatedContent delayMs={120}>
+                            <p className="text-sm text-[var(--color-cyan-dark)] font-semibold mb-2">{t("المميزات", "Features")}</p>
+                        </AnimatedContent>
+                        <AnimatedContent delayMs={220}>
+                            <h2 className="text-3xl font-bold">{t("تحكم كامل، ذكاء مطلق", "Total Control, Absolute Intelligence")}</h2>
+                        </AnimatedContent>
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {[
+                            { icon: <Waves className="w-7 h-7" />, title: t("مراقبة لحظية من بعيد", "Real-time Remote Monitoring"), desc: t("تابع حالة جميع أحواضك في الوقت الحقيقي عبر مستشعرات متقدمة، مع إمكانية التحكم عن بُعد.", "Track all your ponds in real-time via advanced sensors, with remote control capabilities.") },
+                            { icon: <Cpu className="w-7 h-7" />, title: t("ذكاء اصطناعي متطور", "Advanced AI"), desc: t("نماذج AI مدرّبة على بيانات الاستزراع السمكي لتحليل القراءات وتشخيص الأمراض وتوقع المشكلات.", "AI models trained on aquaculture data to analyze readings, diagnose diseases, and predict issues.") },
+                            { icon: <Bell className="w-7 h-7" />, title: t("تنبيهات فورية ذكية", "Smart Instant Alerts"), desc: t("إشعارات ذكية فورية عند حدوث أي خلل في معايير المياه، قبل أن تتفاقم المشكلة.", "Instant smart notifications upon any anomaly in water parameters, before problems escalate.") },
+                            { icon: <BarChart3 className="w-7 h-7" />, title: t("تقارير وتحليلات شاملة", "Comprehensive Reports & Analytics"), desc: t("رسوم بيانية وتقارير PDF مفصلة لتتبع أداء مزرعتك، مع توصيات AI لتحسين الإنتاج.", "Detailed charts and PDF reports to track your farm's performance, with AI recommendations.") },
+                        ].map((f, i) => (
+                            <AnimatedContent key={i} delayMs={i * 140} className="h-full">
+                                <div className="card p-6 text-center group h-full">
+                                    <div className="w-14 h-14 rounded-xl bg-[var(--color-cyan-glow)] text-[var(--color-cyan-dark)] flex items-center justify-center mx-auto mb-4 transition-colors">
+                                        {f.icon}
+                                    </div>
+                                    <h3 className="text-base font-bold mb-2">{f.title}</h3>
+                                    <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{f.desc}</p>
+                                </div>
+                            </AnimatedContent>
+                        ))}
+                    </div>
+                </section>
 
-            {/* Charts */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-              <div className="card">
-                <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">{t("اتجاهات جودة المياه", "Water Quality Trends")}</h4>
-                <div className="h-48">
-                  {active?.history.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={active.history}>
-                        <XAxis dataKey="time" hide /><YAxis hide domain={["auto", "auto"]} />
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Line type="monotone" dataKey="pH" stroke="#3b82f6" strokeWidth={2} dot={false} name="pH" />
-                        <Line type="monotone" dataKey="DO" stroke="#10b981" strokeWidth={2} dot={false} name="Oxygen" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">{t("لا توجد بيانات تاريخية", "No historical data")}</div>
-                  )}
-                </div>
-              </div>
-              <div className="card">
-                <h4 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4">{t("الأمونيا (NH3) ودرجة الحرارة (°)", "Ammonia (NH3) & Temperature (°)")}</h4>
-                <div className="h-48">
-                  {active?.history.length > 0 ? (
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={active.history}>
-                        <XAxis dataKey="time" hide /><YAxis hide domain={["auto", "auto"]} />
-                        <Tooltip contentStyle={tooltipStyle} />
-                        <Line type="monotone" dataKey="T" stroke="#f59e0b" strokeWidth={2} dot={false} name="Temperature" />
-                        <Line type="monotone" dataKey="NH3" stroke="#ef4444" strokeWidth={2} dot={false} name="NH3" />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  ) : (
-                    <div className="h-full flex items-center justify-center text-[var(--color-text-muted)] text-sm">{t("لا توجد بيانات تاريخية", "No historical data")}</div>
-                  )}
-                </div>
-              </div>
+                {/* ===== AI SECTION (AquaAI) ===== */}
+                <section id="ai" className="max-w-7xl mx-auto px-6 md:px-12 py-20">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+                        {/* Chat Preview */}
+                        <div className="order-2 lg:order-1">
+                            <div className="card p-6 space-y-4">
+                                <div className="flex items-center gap-3 mb-2">
+                                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center shadow-lg">
+                                        <Sparkles className="w-5 h-5 text-white" />
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold">{t("AquaAI مساعدك الذكي", "AquaAI Your Smart Assistant")}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{t("متاح 24/7", "Available 24/7")}</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="bg-[var(--color-cyan)] text-white font-medium rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm max-w-[80%] mr-auto shadow-sm">{t("كيف حال الحوض رقم ٣؟", "How is Pond 3 doing?")}</div>
+                                    <div className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-[var(--color-text-primary)] max-w-[85%]">
+                                        {t("الحوض رقم 3 في حالة جيدة ✅", "Pond 3 is in good condition ✅")}
+                                        <br />{t("الأكسجين المذاب (DO) 6.5 mg/L (مثالي)، درجة الحرارة (°) 28، قوة الهيدروجين (PH) 7.2.", "Dissolved Oxygen (DO) 6.5 mg/L (Ideal), Temperature (°) 28, Power of hydrogen (PH) 7.2.")}
+                                        <br /><span className="text-[var(--color-warning)] font-semibold">{t("💡 أنصح", "💡 I recommend")}</span> {t("بتشغيل البدالة خلال ساعات الظهيرة.", "running the aerator during noon hours.")}
+                                    </div>
+                                    <div className="bg-[var(--color-cyan)] text-white font-medium rounded-2xl rounded-tr-sm px-4 py-2.5 text-sm max-w-[80%] mr-auto shadow-sm">{t("السمكة دي عندها مشكلة؟ 📸", "Does this fish have a problem? 📸")}</div>
+                                    <div className="bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-2xl rounded-tl-sm px-4 py-3 text-sm text-[var(--color-text-primary)] max-w-[85%]">
+                                        {t("بعد تحليل الصورة:", "After analyzing the image:")} <span className="text-[var(--color-danger)] font-bold">{t("⚠️ مرض البقع البيضاء (Ich)", "⚠️ White Spot Disease (Ich)")}</span>
+                                        <br />{t("العلاج: رفع درجة الحرارة (°) + ملح 3 جم/لتر.", "Treatment: Raise Temperature (°) + 3g/L salt.")}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Text */}
+                        <div className="order-1 lg:order-2 text-start">
+                            <p className="text-sm text-[var(--color-cyan-dark)] font-semibold mb-2">{t("الذكاء الاصطناعي", "Artificial Intelligence")}</p>
+                            <h2 className="text-3xl font-bold mb-4">
+                                {t("مساعدك الذكي", "Your Smart Assistant")} <span className="text-[var(--color-cyan-dark)]">AquaAI</span>
+                            </h2>
+                            <p className="text-[var(--color-text-secondary)] leading-relaxed mb-6">
+                                {t("مدعوم بنموذج", "Powered by")} <span className="text-[var(--color-text-primary)] font-semibold">Google Gemini</span> {t("المتقدم. اسأله عن حالة أي حوض، أرسل له صورة لسمكة مريضة للتشخيص الفوري، أو اطلب منه توصيات لتحسين الإنتاج وتقليل الخسائر.", "Advanced model. Ask about any pond's status, send an image for fast diagnosis, or get recommendations.")}
+                            </p>
+                            <ul className="space-y-3">
+                                {[
+                                    t("مراقبة ذكية بالبيانات الحية من المستشعرات", "Smart monitoring with live sensor data"),
+                                    t("تشخيص أمراض الأسماك بالصور فوراً", "Instant fish disease diagnosis via images"),
+                                    t("حلول عملية فورية مبنية على بيانات حقيقية", "Instant practical solutions based on real data"),
+                                    t("تقارير AI تلقائية عن حالة المزرعة", "Automated AI reports on farm status"),
+                                ].map((item, i) => (
+                                    <li key={i} className="flex items-center gap-3 text-sm text-[var(--color-text-secondary)] justify-start">
+                                        <CheckCircle2 className="w-4 h-4 text-[var(--color-cyan-dark)] flex-shrink-0" />
+                                        {item}
+                                    </li>
+                                ))}
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== MARKET / VALUE ===== */}
+                <section id="market" className="max-w-7xl mx-auto px-6 md:px-12 py-20">
+                    <div className="text-center mb-14">
+                        <p className="text-sm text-[var(--color-cyan-dark)] font-semibold mb-2">{t("القيمة", "Value")}</p>
+                        <h2 className="text-3xl font-bold">{t("قيمة مضافة لاستثمارك", "Added Value for Your Investment")}</h2>
+                        <p className="text-[var(--color-text-secondary)] mt-3 max-w-xl mx-auto">{t("زد من أرباحك وقلّل الخسائر مع تقارير الكفاءة الاقتصادية والمحاكاة المالية.", "Increase your profits and reduce losses with economic efficiency reports and financial simulations.")}</p>
+                    </div>
+
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center max-w-5xl mx-auto">
+                        {/* Chart */}
+                        <div className="card p-6">
+                            <div className="flex items-center justify-between mb-6">
+                                <div className="flex gap-3">
+                                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-center shadow-sm">
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{t("هذا الأسبوع", "This Week")}</p>
+                                        <p className="text-xs font-bold text-[var(--color-warning)]">↓ 12%</p>
+                                    </div>
+                                    <div className="bg-[var(--color-bg-primary)] border border-[var(--color-border)] rounded-lg px-3 py-1.5 text-center shadow-sm">
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{t("هذا الشهر", "This Month")}</p>
+                                        <p className="text-xs font-bold text-[var(--color-success)]">↑ 24%</p>
+                                    </div>
+                                </div>
+                                <div className="text-right">
+                                    <p className="text-sm text-[var(--color-text-secondary)]">{t("القيمة الإجمالية", "Total Value")}</p>
+                                    <p className="text-2xl font-bold">1,250,000 <span className="text-sm text-[var(--color-text-muted)]">{t("ج.م", "EGP")}</span></p>
+                                </div>
+                            </div>
+                            <div className="h-48">
+                                <ResponsiveContainer width="100%" height="100%">
+                                    <BarChart data={revenueData}>
+                                        <XAxis dataKey="m" tick={{ fill: "var(--color-text-muted)", fontSize: 11 }} axisLine={false} tickLine={false} />
+                                        <YAxis hide />
+                                        <Tooltip contentStyle={{ backgroundColor: "var(--color-bg-card)", borderColor: "var(--color-border)", color: "var(--color-text-primary)", borderRadius: "8px", fontSize: "12px" }} />
+                                        <Bar dataKey="val" fill="var(--color-teal)" radius={[6, 6, 0, 0]} />
+                                    </BarChart>
+                                </ResponsiveContainer>
+                            </div>
+                        </div>
+
+                        {/* Market Cards */}
+                        <div className="space-y-4">
+                            <div className="card p-5">
+                                <div className="flex items-center gap-3 mb-3">
+                                    <Store className="w-6 h-6 text-[var(--color-cyan-dark)]" />
+                                    <h3 className="text-base font-bold">{t("متابعة سوق السمك", "Fish Market Tracking")}</h3>
+                                </div>
+                                <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">
+                                    {t("تابع أسعار السوق لحظة بلحظة واحصل على تنبيهات ذكية لأفضل وقت للبيع. محاكاة مالية لتقدير الأرباح قبل الحصاد.", "Track market prices live and get smart alerts for the best time to sell. Financial simulation to estimate profits before harvest.")}
+                                </p>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                                {[
+                                    { value: "92%", label: t("معدل النجاح", "Success Rate") },
+                                    { value: "3x", label: t("عائد الاستثمار", "ROI") },
+                                    { value: "40%", label: t("تقليل الخسائر", "Loss Reduction") },
+                                ].map((v, i) => (
+                                    <div key={i} className="card p-4 text-center">
+                                        <p className="text-2xl font-bold text-[var(--color-cyan-dark)]">{v.value}</p>
+                                        <p className="text-[10px] text-[var(--color-text-muted)]">{v.label}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== WHO WE ARE ===== */}
+                <section className="max-w-7xl mx-auto px-6 md:px-12 py-20">
+                    <div className="card p-8 md:p-12 border-[var(--color-cyan)]/20 shadow-lg relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-[var(--color-cyan-glow)] to-transparent opacity-20 pointer-events-none" />
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-center relative z-10">
+                            <div className="text-start">
+                                <p className="text-sm text-[var(--color-cyan-dark)] font-semibold mb-2">{t("من نحن؟", "Who Are We?")}</p>
+                                <h2 className="text-2xl font-bold mb-4">{t("نعالج مشكلة حقيقية", "We Solve a Real Problem")}</h2>
+                                <p className="text-[var(--color-text-secondary)] leading-relaxed mb-4">
+                                    {t("الثروة السمكية في مصر تواجه تحديات كبيرة بسبب", "Fish farming faces huge challenges due to")} <span className="text-[var(--color-text-primary)] font-semibold">{t("غياب الرقابة والمتابعة", "lack of monitoring and oversight")}</span>. {t("آلاف الأطنان تُفقد سنوياً بسبب مشاكل في جودة المياه وأمراض الأسماك التي يتم اكتشافها متأخراً.", "Thousands of tons are lost annually due to poor water quality and delayed disease detection.")}
+                                </p>
+                                <p className="text-[var(--color-text-secondary)] leading-relaxed">
+                                    <span className="text-[var(--color-cyan-dark)] font-semibold">AquaSmart AI</span> {t("يحل هذه المشكلة بتوفير نظام مراقبة ذكي شامل يتيح لأصحاب المزارع متابعة أحواض السمك لحظة بلحظة عبر الموبايل أو الويبسايت، مع تنبيهات فورية وتحليلات بالذكاء الاصطناعي.", "solves this by providing a comprehensive smart monitoring system allowing farm owners to track ponds in real-time via mobile or web, with instant alerts and AI analytics.")}
+                                </p>
+                            </div>
+                            <div className="space-y-3">
+                                {[
+                                    { emoji: "📡", text: t("مستشعرات حية ترسل البيانات كل ثانية", "Live sensors transmitting data every second") },
+                                    { emoji: "🧠", text: t("نموذج AI يحلل ويتوقع المشاكل قبل حدوثها", "AI model predicting problems before they occur") },
+                                    { emoji: "📱", text: t("لوحة تحكم متكاملة عبر الويب والموبايل", "Comprehensive web and mobile dashboard") },
+                                    { emoji: "💰", text: t("محاكاة مالية وبورصة أسعار السمك", "Financial simulation and fish market prices") },
+                                    { emoji: "🔔", text: t("تنبيهات فورية عند أي خطر", "Instant alerts for any risk") },
+                                ].map((item, i) => (
+                                    <div key={i} className="flex items-center gap-3 bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-lg p-3 shadow-sm">
+                                        <span className="text-xl">{item.emoji}</span>
+                                        <p className="text-sm text-[var(--color-text-primary)] font-medium">{item.text}</p>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== CTA ===== */}
+                <section id="contact" className="max-w-4xl mx-auto px-6 md:px-12 py-20">
+                    <div className="card p-10 text-center border-[var(--color-cyan)]/30 shadow-xl relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-full h-full bg-gradient-to-l from-[var(--color-cyan-glow)] to-transparent opacity-30 pointer-events-none" />
+                        <div className="relative z-10">
+                            <h2 className="text-2xl md:text-3xl font-bold mb-3">{t("جاهز لمضاعفة إنتاجك؟", "Ready to double your production?")}</h2>
+                            <p className="text-[var(--color-text-secondary)] mb-8 max-w-lg mx-auto">{t("ابدأ الآن واكتشف كيف يمكن لـ AquaSmart AI تحويل مزرعتك إلى مزرعة ذكية بالكامل.", "Start now and discover how AquaSmart AI can transform your farm into a fully smart farm.")}</p>
+                            <div className="flex items-center justify-center gap-4 flex-wrap">
+                                <button onClick={handleStartClick} className="btn-primary px-10 py-3.5 text-base inline-flex items-center gap-2 shadow-lg shadow-[var(--color-cyan-glow)]">
+                                    {t("ابدأ تجربتك", "Start your experience")}
+                                    <ChevronLeft className={`w-5 h-5 ${lang === "en" ? "rotate-180" : ""}`} />
+                                </button>
+                                <button onClick={handleDashboardClick} className="btn-secondary px-8 py-3.5 text-base shadow-sm">
+                                    {t("تصفح لوحة التحكم", "Browse Dashboard")}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                {/* ===== FOOTER ===== */}
+                <footer className="border-t border-[var(--color-border)] py-8 mt-10">
+                    <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between text-sm text-[var(--color-text-muted)] flex-row-reverse md:flex-row gap-6">
+                        <div className="flex gap-6">
+                            <a href="#features" className="hover:text-[var(--color-text-primary)] transition-colors">{t("المميزات", "Features")}</a>
+                            <a href="#ai" className="hover:text-[var(--color-text-primary)] transition-colors">{t("الذكاء الاصطناعي", "AI")}</a>
+                            <button onClick={() => setIsContactOpen(true)} className="hover:text-[var(--color-text-primary)] transition-colors">{t("تواصل", "Contact")}</button>
+                        </div>
+                        <p className="whitespace-nowrap">
+                            {t("© 2024-2025 نظام AquaSmart AI. جميع الحقوق محفوظة.", "© 2024-2025 AquaSmart AI System. All rights reserved.")}
+                        </p>
+                    </div>
+                </footer>
+
+                <ContactModal isOpen={isContactOpen} onClose={() => setIsContactOpen(false)} />
             </div>
-          </div>
-        </div>
-      </div>
-    </PageTransition>
-  );
+        </PageTransition>
+    );
 }
+
