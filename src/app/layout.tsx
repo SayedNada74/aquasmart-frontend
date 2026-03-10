@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 
+const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aquasmart-frontend-sovt.vercel.app";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(siteUrl),
   title: "AquaSmart AI - إدارة المزارع السمكية",
   description: "نظام ذكاء اصطناعي متقدم لمراقبة وإدارة المزارع السمكية في مصر. متابعة لحظية للأحواض، تحليل بالذكاء الاصطناعي، تنبيهات فورية.",
   keywords: ["aquaculture", "fish farming", "AI", "IoT", "مزارع سمكية", "ذكاء اصطناعي", "استزراع سمكي"],
@@ -14,6 +16,13 @@ export const metadata: Metadata = {
     title: "AquaSmart AI - Smart Fish Farm Management",
     description: "AI-powered aquaculture monitoring system with real-time sensor data, disease diagnosis, and smart alerts.",
     type: "website",
+    url: siteUrl,
+    images: [{ url: "/logo.png" }],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "AquaSmart AI - Smart Fish Farm Management",
+    description: "AI-powered aquaculture monitoring system with real-time sensor data, disease diagnosis, and smart alerts.",
     images: ["/logo.png"],
   },
 };
