@@ -3,27 +3,38 @@ import "./globals.css";
 import { LayoutWrapper } from "@/components/layout/LayoutWrapper";
 
 const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || "https://aquasmart-frontend-sovt.vercel.app";
+const socialTitle = "AquaSmart AI | Real-Time Smart Fish Farm Management";
+const socialDescription =
+  "Monitor fish ponds in real time, receive AI-powered alerts, analyze water quality, and manage aquaculture operations through one premium dashboard.";
 
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
-  title: "AquaSmart AI - إدارة المزارع السمكية",
-  description: "نظام ذكاء اصطناعي متقدم لمراقبة وإدارة المزارع السمكية في مصر. متابعة لحظية للأحواض، تحليل بالذكاء الاصطناعي، تنبيهات فورية.",
-  keywords: ["aquaculture", "fish farming", "AI", "IoT", "مزارع سمكية", "ذكاء اصطناعي", "استزراع سمكي"],
+  title: socialTitle,
+  description: socialDescription,
+  keywords: [
+    "aquaculture",
+    "fish farming",
+    "AI",
+    "IoT",
+    "smart aquaculture",
+    "fish pond monitoring",
+    "water quality analytics",
+  ],
   manifest: "/manifest.json",
   icons: { icon: "/logo.png", apple: "/logo.png" },
   appleWebApp: { capable: true, statusBarStyle: "black-translucent", title: "AquaSmart" },
   openGraph: {
-    title: "AquaSmart AI - Smart Fish Farm Management",
-    description: "AI-powered aquaculture monitoring system with real-time sensor data, disease diagnosis, and smart alerts.",
+    title: socialTitle,
+    description: socialDescription,
     type: "website",
     url: siteUrl,
-    images: [{ url: "/logo.png" }],
+    images: [{ url: "/opengraph-image" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "AquaSmart AI - Smart Fish Farm Management",
-    description: "AI-powered aquaculture monitoring system with real-time sensor data, disease diagnosis, and smart alerts.",
-    images: ["/logo.png"],
+    title: socialTitle,
+    description: socialDescription,
+    images: ["/twitter-image"],
   },
 };
 
@@ -44,7 +55,10 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
-        <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+        <link
+          href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800&display=swap"
+          rel="stylesheet"
+        />
       </head>
       <body className="font-cairo" suppressHydrationWarning>
         <LayoutWrapper>{children}</LayoutWrapper>
