@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { database } from "@/lib/firebase";
 import { ref, onValue } from "firebase/database";
 import { useApp } from "@/lib/AppContext";
+import { calculateHealthScore } from "@/lib/farmHealth";
 
 export type ReportPeriod = "weekly" | "monthly";
 
@@ -83,14 +84,7 @@ export function useReportsData(period: ReportPeriod): ReportData {
                 const current = pond.current || {};
                 const ai = pond.ai_result?.current || {};
 
-                // Calculate health score (0-100)
-                let score = 100;
-                if (current.Ammonia > 0.6) score -= 35;
-                if (current.DO < 4.5) score -= 25;
-                if (current.Temperature > 31 || current.Temperature < 21) score -= 15;
-                if (current.PH < 6.5 || current.PH > 8.5) score -= 15;
-
-                const finalScore = Math.max(0, score);
+                const finalScore = calculateHealthScore(current);
                 totalHealth += finalScore;
                 if (ai.Status?.includes("Danger") || ai.Status?.includes("Warning")) totalAlerts++;
 

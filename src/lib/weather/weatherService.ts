@@ -1,58 +1,77 @@
-"use client";
-
 export interface WeatherData {
-    temp: number;
-    condition: "sunny" | "cloudy" | "rainy" | "windy";
-    humidity: number;
-    windSpeed: number;
-    uvIndex: number;
-    description_ar: string;
-    description_en: string;
+  temp: number;
+  condition: "sunny" | "cloudy" | "rainy" | "windy";
+  humidity: number;
+  windSpeed: number;
+  uvIndex: number;
+  description_ar: string;
+  description_en: string;
+  source: "api" | "derived";
 }
 
-const WEATHER_MOCK_DATA: Record<string, WeatherData> = {
-    "default": {
-        temp: 24,
-        condition: "sunny",
-        humidity: 45,
-        windSpeed: 12,
-        uvIndex: 6,
-        description_ar: "مشمس جزئياً - جو مثالي للمزرعة",
-        description_en: "Partly Sunny - Ideal for the farm"
-    },
-    "kafr el-sheikh": {
-        temp: 22,
-        condition: "cloudy",
-        humidity: 60,
-        windSpeed: 15,
-        uvIndex: 4,
-        description_ar: "غائم جزئياً في كفر الشيخ",
-        description_en: "Partly Cloudy in Kafr El-Sheikh"
-    },
-    "rosetta": {
-        temp: 19,
-        condition: "windy",
-        humidity: 70,
-        windSpeed: 25,
-        uvIndex: 3,
-        description_ar: "رياح متوسطة في رشيد - انتبه للبدالات",
-        description_en: "Moderate wind in Rosetta - Check Aerators"
-    }
-};
+interface WeatherFetchResponse extends WeatherData {
+  ok: boolean;
+}
 
-export async function fetchWeather(location: string): Promise<WeatherData> {
-    // Simulate API delay
-    await new Promise(r => setTimeout(r, 800));
+export async function fetchWeather(location: string, averageTemp?: number): Promise<WeatherData> {
+  const params = new URLSearchParams();
+  params.set("location", location || "Default");
+  if (typeof averageTemp === "number") params.set("avgTemp", String(averageTemp));
 
-    const normalized = location.toLowerCase().trim();
-    if (normalized.includes("كفر الشيخ") || normalized.includes("kafr")) return WEATHER_MOCK_DATA["kafr el-sheikh"];
-    if (normalized.includes("رشيد") || normalized.includes("rosetta")) return WEATHER_MOCK_DATA["rosetta"];
+  try {
+    const response = await fetch(`/api/weather?${params.toString()}`, { cache: "no-store" });
+    if (!response.ok) throw new Error("Weather request failed");
 
-    // Add some random variation
-    const base = WEATHER_MOCK_DATA["default"];
-    return {
-        ...base,
-        temp: base.temp + (Math.random() * 4 - 2),
-        humidity: base.humidity + (Math.random() * 10 - 5)
-    };
+    const data = (await response.json()) as WeatherFetchResponse;
+    if (!data.ok) throw new Error("Weather payload invalid");
+
+    return data;
+  } catch {
+    return deriveWeatherFromContext(location, averageTemp);
+  }
+}
+
+export function deriveWeatherFromContext(location: string, averageTemp?: number): WeatherData {
+  const normalizedLocation = location.toLowerCase().trim();
+  const temp = typeof averageTemp === "number" ? Number(averageTemp.toFixed(1)) : inferBaseTemperature(normalizedLocation);
+  const hour = new Date().getHours();
+
+  let condition: WeatherData["condition"] = "cloudy";
+  if (normalizedLocation.includes("rosetta") || normalizedLocation.includes("رشيد")) condition = "windy";
+  else if (temp >= 30) condition = "sunny";
+  else if (temp <= 18) condition = "rainy";
+  else if (hour >= 12 && hour <= 16 && temp >= 26) condition = "sunny";
+
+  return {
+    temp,
+    condition,
+    humidity: condition === "rainy" ? 76 : condition === "windy" ? 58 : 52,
+    windSpeed: condition === "windy" ? 24 : condition === "rainy" ? 16 : 11,
+    uvIndex: condition === "sunny" ? 7 : condition === "cloudy" ? 4 : 2,
+    description_ar: buildArabicDescription(condition, normalizedLocation),
+    description_en: buildEnglishDescription(condition, normalizedLocation),
+    source: "derived",
+  };
+}
+
+function inferBaseTemperature(location: string) {
+  if (location.includes("kafr")) return 23;
+  if (location.includes("rosetta")) return 21;
+  return 25;
+}
+
+function buildArabicDescription(condition: WeatherData["condition"], location: string) {
+  const locationHint = location && location !== "default" ? " حسب موقع المزرعة" : " حول المزرعة";
+  if (condition === "sunny") return `مشمس ودافئ${locationHint}`;
+  if (condition === "windy") return `رياح نشطة${locationHint} - راقب التهوية`;
+  if (condition === "rainy") return `أجواء باردة ورطبة${locationHint}`;
+  return `طقس معتدل ومتغير${locationHint}`;
+}
+
+function buildEnglishDescription(condition: WeatherData["condition"], location: string) {
+  const locationHint = location && location !== "default" ? " around the farm location" : " around the farm";
+  if (condition === "sunny") return `Sunny and warm${locationHint}`;
+  if (condition === "windy") return `Active wind${locationHint} - monitor aeration`;
+  if (condition === "rainy") return `Cool and humid conditions${locationHint}`;
+  return `Mild and variable weather${locationHint}`;
 }
