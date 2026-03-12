@@ -8,6 +8,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recha
 import { PageTransition } from "@/components/motion/PageTransition";
 import { HeroOcean } from "@/components/hero/HeroOcean";
 import { AnimatedContent } from "@/components/animations/AnimatedContent";
+import { ImpactNumbersSection } from "@/components/landing/ImpactNumbersSection";
 import { WhyEgyptSection } from "@/components/landing/WhyEgyptSection";
 import { useApp } from "@/lib/AppContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
@@ -280,6 +281,7 @@ export default function LandingPage() {
                 </section>
 
                 <WhyEgyptSection />
+                <ImpactNumbersSection />
 
                 {/* ===== CTA ===== */}
                 <section id="contact" className="max-w-4xl mx-auto px-6 md:px-12 py-20">
