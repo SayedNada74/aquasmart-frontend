@@ -6,6 +6,7 @@ import { ref, onValue, update, remove } from "firebase/database";
 import { useApp } from "@/lib/AppContext";
 import { Bell, AlertTriangle, CheckCircle2, Info, XCircle, Trash2, Clock } from "lucide-react";
 import { PageTransition } from "@/components/motion/PageTransition";
+import { getAlertRecoveryGuidance } from "@/lib/alertRecovery";
 
 interface Alert {
     id: string;
@@ -146,6 +147,7 @@ export default function AlertsPage() {
                     ) : (
                         filtered.map((alert) => {
                             const isDanger = alert.type === "danger";
+                            const recovery = getAlertRecoveryGuidance(alert.metrics, alert.desc_ar, alert.desc_en);
 
                             return (
                                 <div
@@ -216,6 +218,18 @@ export default function AlertsPage() {
                                                 <div className="flex-1 bg-[var(--color-bg-input)] p-3 rounded-xl border border-[var(--color-border)]">
                                                     <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase block mb-1">{t("السبب والتحليل", "Reason & Analysis")}</span>
                                                     <span className="text-xs text-[var(--color-text-secondary)] leading-relaxed font-medium">{t(alert.desc_ar, alert.desc_en)}</span>
+                                                </div>
+                                            </div>
+                                            <div className="flex items-start gap-3 text-sm">
+                                                <span className="text-lg">🎯</span>
+                                                <div className="flex-1 bg-[var(--color-bg-input)] p-3 rounded-xl border border-[var(--color-border)]">
+                                                    <span className="text-[10px] text-[var(--color-text-muted)] font-bold uppercase block mb-1">{t("هدف الاستعادة", "Recovery Target")}</span>
+                                                    <span className="text-xs text-[var(--color-text-secondary)] leading-relaxed font-medium block">
+                                                        {t("النطاق الآمن الموصى به:", "Recommended Safe Range:")} {t(recovery.metricLabelAr, recovery.metricLabelEn)} {t(recovery.safeRangeAr, recovery.safeRangeEn)}
+                                                    </span>
+                                                    <span className="text-xs text-[var(--color-cyan)] leading-relaxed font-medium block mt-2">
+                                                        {t("الإجراء المقترح:", "Suggested Action:")} {t(recovery.actionAr, recovery.actionEn)}
+                                                    </span>
                                                 </div>
                                             </div>
                                             <div className="flex items-center justify-between pt-1">
