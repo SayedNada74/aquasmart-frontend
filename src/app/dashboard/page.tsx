@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer } from "recharts";
 import {
   Thermometer,
@@ -29,9 +30,12 @@ type RecommendationSeverity = "safe" | "warning" | "danger";
 
 export default function DashboardPage() {
   const { t, lang } = useApp();
+  const searchParams = useSearchParams();
   const { profile } = useAuth();
   const { ponds, weather, recentAlerts, metrics, loading } = useDashboardData(profile?.farm?.location);
   const [activePond, setActivePond] = useState("pond_1");
+  const [highlightedMetric, setHighlightedMetric] = useState<string | null>(null);
+  const metricRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   useEffect(() => {
     if (!ponds.length) return;
@@ -40,6 +44,37 @@ export default function DashboardPage() {
       setActivePond(ponds[0].id);
     }
   }, [activePond, ponds]);
+
+  useEffect(() => {
+    const pondFromSearch = searchParams.get("pond");
+    if (!pondFromSearch || !ponds.length) return;
+    if (ponds.some((pond) => pond.id === pondFromSearch)) {
+      setActivePond(pondFromSearch);
+    }
+  }, [ponds, searchParams]);
+
+  useEffect(() => {
+    const metricFromSearch = searchParams.get("metric");
+    if (!metricFromSearch) return;
+
+    setHighlightedMetric(metricFromSearch);
+
+    const scrollTimer = window.setTimeout(() => {
+      metricRefs.current[metricFromSearch]?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 120);
+
+    const clearTimer = window.setTimeout(() => {
+      setHighlightedMetric(null);
+    }, 2600);
+
+    return () => {
+      window.clearTimeout(scrollTimer);
+      window.clearTimeout(clearTimer);
+    };
+  }, [searchParams]);
 
   const active = ponds.find((pond) => pond.id === activePond) || ponds[0];
   const selectedPondNumber = active?.id.replace("pond_", "") || "1";
@@ -139,6 +174,7 @@ export default function DashboardPage() {
           currentValue: active.current.Temperature,
           previousValue: active.previousCurrent?.Temperature,
           trendType: "temperature" as const,
+          metricId: "temperature",
           icon: <Thermometer className="w-4 h-4 text-[#f59e0b]" />,
           bg: "bg-[#f59e0b]/10",
           color: "#f59e0b",
@@ -154,6 +190,7 @@ export default function DashboardPage() {
           currentValue: active.current.PH,
           previousValue: active.previousCurrent?.PH,
           trendType: "ph" as const,
+          metricId: "ph",
           icon: <FlaskConical className="w-4 h-4 text-[#3b82f6]" />,
           bg: "bg-[#3b82f6]/10",
           color: "#3b82f6",
@@ -169,6 +206,7 @@ export default function DashboardPage() {
           currentValue: active.current.Ammonia,
           previousValue: active.previousCurrent?.Ammonia,
           trendType: "nh3" as const,
+          metricId: "nh3",
           icon: <Wind className="w-4 h-4 text-[#ef4444]" />,
           bg: "bg-[#ef4444]/10",
           color: "#ef4444",
@@ -184,6 +222,7 @@ export default function DashboardPage() {
           currentValue: active.current.DO,
           previousValue: active.previousCurrent?.DO,
           trendType: "do" as const,
+          metricId: "do",
           icon: <Droplets className="w-4 h-4 text-[#14b8a6]" />,
           bg: "bg-[#14b8a6]/10",
           color: "#14b8a6",
@@ -364,7 +403,13 @@ export default function DashboardPage() {
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               {sensorCards.map((sensor, index) => (
-                <MotionCard key={index} className="card">
+                <div
+                  key={index}
+                  ref={(node) => {
+                    metricRefs.current[sensor.metricId] = node;
+                  }}
+                >
+                <MotionCard className={`card transition-all duration-300 ${highlightedMetric === sensor.metricId ? "border-[var(--color-cyan)] shadow-lg shadow-[var(--color-cyan)]/15" : ""}`}>
                   <div className="flex items-center gap-2 mb-3">
                     <div className={`w-8 h-8 rounded-lg ${sensor.bg} flex items-center justify-center`}>{sensor.icon}</div>
                     <span className="text-xs text-[var(--color-text-secondary)]">{sensor.label}</span>
@@ -384,6 +429,7 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-[10px] text-[var(--color-text-muted)] mt-1">{sensor.status}</p>
                 </MotionCard>
+                </div>
               ))}
             </div>
 
