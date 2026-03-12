@@ -19,13 +19,15 @@ import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
 import { useAuth } from "@/lib/auth/AuthProvider";
-import { calculateHealthScore, getHealthStatus } from "@/lib/farmHealth";
+import { getHealthStatus } from "@/lib/farmHealth";
 import { useDashboardData } from "@/hooks/useDashboardData";
+
+type RecommendationSeverity = "safe" | "warning" | "danger";
 
 export default function DashboardPage() {
   const { t, lang } = useApp();
   const { profile } = useAuth();
-  const { ponds, weather, recommendation, recentAlerts, metrics, globalSafety, loading } = useDashboardData(profile?.farm?.location);
+  const { ponds, weather, recentAlerts, metrics, loading } = useDashboardData(profile?.farm?.location);
   const [activePond, setActivePond] = useState("pond_1");
 
   useEffect(() => {
@@ -37,16 +39,125 @@ export default function DashboardPage() {
   }, [activePond, ponds]);
 
   const active = ponds.find((pond) => pond.id === activePond) || ponds[0];
+  const selectedPondNumber = active?.id.replace("pond_", "") || "1";
+  const selectedPondLabel = t(`حوض ${selectedPondNumber}`, `Pond ${selectedPondNumber}`);
 
-  const globalSafetyStatus = getHealthStatus(globalSafety);
-  const globalSafetyColor =
-    globalSafetyStatus === "safe" ? "#10b981" : globalSafetyStatus === "warning" ? "#f59e0b" : "#ef4444";
-  const globalSafetyText =
-    globalSafetyStatus === "safe"
+  const selectedPondSafety = active?.score ?? 0;
+  const selectedPondSafetyStatus: RecommendationSeverity =
+    selectedPondSafety >= 85 ? "safe" : selectedPondSafety >= 60 ? "warning" : "danger";
+  const selectedPondSafetyColor =
+    selectedPondSafetyStatus === "safe" ? "#10b981" : selectedPondSafetyStatus === "warning" ? "#f59e0b" : "#ef4444";
+  const selectedPondSafetyText =
+    selectedPondSafetyStatus === "safe"
       ? t("ممتازة", "Excellent")
-      : globalSafetyStatus === "warning"
+      : selectedPondSafetyStatus === "warning"
         ? t("تحتاج انتباه", "Caution")
         : t("حرجة", "Critical");
+
+  const recommendation = useMemo(() => {
+    if (!active) {
+      return {
+        ar: "جاري تحليل حالة الحوض المحدد...",
+        en: "Analyzing the selected pond status...",
+        severity: "safe" as RecommendationSeverity,
+      };
+    }
+
+    const { DO, Ammonia, PH, Temperature } = active.current;
+    const aiStatus = active.ai.Status || "";
+
+    if (typeof Ammonia === "number" && Ammonia > 0.8) {
+      return {
+        ar: "مستوى الأمونيا مرتفع في هذا الحوض. يُفضل تدخل فوري لتحسين جودة المياه.",
+        en: "Ammonia levels are elevated in this pond. Water quality intervention is recommended immediately.",
+        severity: "danger" as RecommendationSeverity,
+      };
+    }
+
+    if (typeof DO === "number" && DO < 4.2) {
+      return {
+        ar: "الأكسجين المذاب منخفض في هذا الحوض. فكر في تشغيل البدالات فورًا.",
+        en: "Low dissolved oxygen detected in this pond. Consider activating the aerators immediately.",
+        severity: "danger" as RecommendationSeverity,
+      };
+    }
+
+    if (typeof Ammonia === "number" && Ammonia > 0.5) {
+      return {
+        ar: "الأمونيا أعلى من المثالي في هذا الحوض. راقب التهوية وجدول تغيير المياه.",
+        en: "Ammonia is above the ideal range in this pond. Monitor aeration and the water exchange schedule closely.",
+        severity: "warning" as RecommendationSeverity,
+      };
+    }
+
+    if (typeof DO === "number" && DO < 5) {
+      return {
+        ar: "مستوى الأكسجين أقل من المثالي لهذا الحوض. متابعة التهوية موصى بها.",
+        en: "Dissolved oxygen is below the ideal target for this pond. Aeration should be monitored closely.",
+        severity: "warning" as RecommendationSeverity,
+      };
+    }
+
+    if (typeof PH === "number" && (PH < 6.5 || PH > 8.5)) {
+      return {
+        ar: "قيمة الحموضة خارج النطاق المثالي في هذا الحوض. راقب توازن المياه خلال الدورة القادمة.",
+        en: "The pH level is outside the optimal range in this pond. Monitor water balance during the next cycle.",
+        severity: "warning" as RecommendationSeverity,
+      };
+    }
+
+    if (typeof Temperature === "number" && (Temperature < 22 || Temperature > 32)) {
+      return {
+        ar: "درجة حرارة المياه غير مثالية في هذا الحوض. راقب الحمل الحيوي والتهوية.",
+        en: "Water temperature is outside the ideal range in this pond. Monitor biological load and aeration.",
+        severity: "warning" as RecommendationSeverity,
+      };
+    }
+
+    if (aiStatus.includes("Danger")) {
+      return {
+        ar: "الذكاء الاصطناعي رصد خطرًا في هذا الحوض. راجع القراءات الحالية ونفّذ إجراءً تصحيحيًا.",
+        en: "AI detected a risk in this pond. Review the live readings and apply corrective action now.",
+        severity: "danger" as RecommendationSeverity,
+      };
+    }
+
+    if (aiStatus.includes("Warning") || getHealthStatus(selectedPondSafety) === "warning") {
+      return {
+        ar: "حالة الحوض مستقرة نسبيًا ولكن تحتاج متابعة قريبة خلال الساعات القادمة.",
+        en: "This pond is relatively stable, but it needs closer monitoring over the next few hours.",
+        severity: "warning" as RecommendationSeverity,
+      };
+    }
+
+    return {
+      ar: "ظروف المياه مستقرة في هذا الحوض. لا يوجد إجراء فوري مطلوب.",
+      en: "Water conditions are stable in this pond. No immediate action is required.",
+      severity: "safe" as RecommendationSeverity,
+    };
+  }, [active, selectedPondSafety]);
+
+  const recommendationStyles =
+    recommendation.severity === "danger"
+      ? {
+          card: "from-[#ef4444]/10 to-transparent border-[#ef4444]/20",
+          icon: "bg-[#ef4444]/10",
+          iconColor: "text-[#ef4444]",
+          title: "text-[#ef4444]",
+        }
+      : recommendation.severity === "warning"
+        ? {
+            card: "from-[#f59e0b]/10 to-transparent border-[#f59e0b]/20",
+            icon: "bg-[#f59e0b]/10",
+            iconColor: "text-[#f59e0b]",
+            title: "text-[#f59e0b]",
+          }
+        : {
+            card: "from-[var(--color-cyan)]/10 to-transparent border-[var(--color-cyan)]/20",
+            icon: "bg-[var(--color-cyan)]/10",
+            iconColor: "text-[var(--color-cyan)]",
+            title: "text-[var(--color-cyan)]",
+          };
 
   const currentHour = new Date().getHours();
   const greeting =
@@ -151,8 +262,8 @@ export default function DashboardPage() {
             </h2>
             <p className="text-white/80 text-sm max-w-md leading-relaxed">
               {t(
-                `المزرعة في حالة ${globalSafetyText}. لديك ${metrics.activeAlerts} تنبيهات نشطة و ${metrics.totalPonds} أحواض تعمل بكفاءة.`,
-                `The farm is in ${globalSafetyText} status. You have ${metrics.activeAlerts} active alerts and ${metrics.totalPonds} ponds running efficiently.`,
+                `المزرعة في حالة جيدة. لديك ${metrics.activeAlerts} تنبيهات نشطة و ${metrics.totalPonds} أحواض تعمل بكفاءة.`,
+                `The farm is in good shape. You have ${metrics.activeAlerts} active alerts and ${metrics.totalPonds} ponds running efficiently.`,
               )}
             </p>
           </MotionCard>
@@ -229,19 +340,21 @@ export default function DashboardPage() {
                     cy="60"
                     r="50"
                     fill="none"
-                    stroke={globalSafetyColor}
+                    stroke={selectedPondSafetyColor}
                     strokeWidth="10"
                     strokeLinecap="round"
-                    strokeDasharray={`${globalSafety * 3.14} ${314 - globalSafety * 3.14}`}
+                    strokeDasharray={`${selectedPondSafety * 3.14} ${314 - selectedPondSafety * 3.14}`}
                     className="transition-all duration-1000"
                   />
                 </svg>
                 <div className="absolute inset-0 flex flex-col items-center justify-center">
-                  <span className="text-4xl font-bold text-[var(--color-text-primary)]">{globalSafety}</span>
-                  <span className="text-sm text-[var(--color-text-secondary)]">{globalSafetyText}</span>
+                  <span className="text-4xl font-bold text-[var(--color-text-primary)]">{selectedPondSafety}</span>
+                  <span className="text-sm text-[var(--color-text-secondary)]">{selectedPondSafetyText}</span>
                 </div>
               </div>
-              <p className="text-xs text-[var(--color-text-muted)]">{t("تم تحليل حالة المزرعة بالاعتماد على جميع الأحواض الحالية", "Farm safety was calculated from all current pond readings")}</p>
+              <p className="text-xs text-[var(--color-text-muted)]">
+                {t(`تم حساب مستوى السلامة الحالي لـ ${selectedPondLabel} بناءً على قراءاته المباشرة`, `The safety score shown here is calculated for ${selectedPondLabel} only from its live readings`)}
+              </p>
             </MotionCard>
 
             <div className="card">
@@ -272,7 +385,7 @@ export default function DashboardPage() {
                 ) : (
                   <div className="flex items-center gap-2 text-[#10b981] text-sm">
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>{t("لا توجد تنبيهات حالياً", "No alerts currently")}</span>
+                    <span>{t("لا توجد تنبيهات حاليًا", "No alerts currently")}</span>
                   </div>
                 )}
               </div>
@@ -309,12 +422,12 @@ export default function DashboardPage() {
               ))}
             </div>
 
-            <MotionCard className="bg-gradient-to-l from-[var(--color-cyan)]/10 to-transparent border border-[var(--color-cyan)]/20 rounded-xl p-5 flex items-start gap-4">
-              <div className="w-12 h-12 rounded-xl bg-[var(--color-cyan)]/10 flex items-center justify-center flex-shrink-0">
-                <Sparkles className="w-6 h-6 text-[var(--color-cyan)]" />
+            <MotionCard className={`bg-gradient-to-l ${recommendationStyles.card} border rounded-xl p-5 flex items-start gap-4`}>
+              <div className={`w-12 h-12 rounded-xl ${recommendationStyles.icon} flex items-center justify-center flex-shrink-0`}>
+                <Sparkles className={`w-6 h-6 ${recommendationStyles.iconColor}`} />
               </div>
               <div className="flex-1">
-                <h4 className="text-sm font-bold text-[var(--color-cyan)] mb-1">{t("توصية الذكاء الاصطناعي", "AI Recommendation")}</h4>
+                <h4 className={`text-sm font-bold mb-1 ${recommendationStyles.title}`}>{t("توصية الذكاء الاصطناعي", "AI Recommendation")}</h4>
                 <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{t(recommendation.ar, recommendation.en)}</p>
               </div>
             </MotionCard>
