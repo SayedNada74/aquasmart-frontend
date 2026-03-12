@@ -19,6 +19,7 @@ import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
 import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
+import { TrendIndicator } from "@/components/monitoring/TrendIndicator";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getHealthStatus } from "@/lib/farmHealth";
 import { getPondIssueDetails } from "@/lib/pondIssue";
@@ -135,6 +136,9 @@ export default function DashboardPage() {
         {
           label: t("درجة الحرارة (°)", "Temperature (°)"),
           value: active.current.Temperature?.toFixed(1),
+          currentValue: active.current.Temperature,
+          previousValue: active.previousCurrent?.Temperature,
+          trendType: "temperature" as const,
           icon: <Thermometer className="w-4 h-4 text-[#f59e0b]" />,
           bg: "bg-[#f59e0b]/10",
           color: "#f59e0b",
@@ -147,6 +151,9 @@ export default function DashboardPage() {
         {
           label: t("قوة الهيدروجين (PH)", "Power of hydrogen (PH)"),
           value: active.current.PH?.toFixed(1),
+          currentValue: active.current.PH,
+          previousValue: active.previousCurrent?.PH,
+          trendType: "ph" as const,
           icon: <FlaskConical className="w-4 h-4 text-[#3b82f6]" />,
           bg: "bg-[#3b82f6]/10",
           color: "#3b82f6",
@@ -159,6 +166,9 @@ export default function DashboardPage() {
         {
           label: t("الأمونيا (NH3)", "Ammonia (NH3)"),
           value: active.current.Ammonia?.toFixed(2),
+          currentValue: active.current.Ammonia,
+          previousValue: active.previousCurrent?.Ammonia,
+          trendType: "nh3" as const,
           icon: <Wind className="w-4 h-4 text-[#ef4444]" />,
           bg: "bg-[#ef4444]/10",
           color: "#ef4444",
@@ -171,6 +181,9 @@ export default function DashboardPage() {
         {
           label: t("الأكسجين المذاب (DO)", "Dissolved Oxygen (DO)"),
           value: active.current.DO?.toFixed(1),
+          currentValue: active.current.DO,
+          previousValue: active.previousCurrent?.DO,
+          trendType: "do" as const,
           icon: <Droplets className="w-4 h-4 text-[#14b8a6]" />,
           bg: "bg-[#14b8a6]/10",
           color: "#14b8a6",
@@ -356,7 +369,10 @@ export default function DashboardPage() {
                     <div className={`w-8 h-8 rounded-lg ${sensor.bg} flex items-center justify-center`}>{sensor.icon}</div>
                     <span className="text-xs text-[var(--color-text-secondary)]">{sensor.label}</span>
                   </div>
-                  <p className="text-3xl font-bold text-[var(--color-text-primary)]">{sensor.value || "--"}</p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-3xl font-bold text-[var(--color-text-primary)]">{sensor.value || "--"}</p>
+                    <TrendIndicator type={sensor.trendType} current={sensor.currentValue} previous={sensor.previousValue} />
+                  </div>
                   <div className="mt-3 h-12">
                     {active?.history.length ? (
                       <ResponsiveContainer width="100%" height="100%">

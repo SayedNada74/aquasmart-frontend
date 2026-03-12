@@ -21,6 +21,7 @@ interface PondAI {
 export interface DashboardPondData {
   id: string;
   current: PondCurrent;
+  previousCurrent?: PondCurrent;
   ai: PondAI;
   history: Array<Record<string, unknown>>;
   score: number;
@@ -68,25 +69,28 @@ export function useDashboardData(location?: string) {
         return;
       }
 
-      const nextPonds = Object.keys(data).map((key) => {
-        const pond = data[key];
-        const current = (pond.current || {}) as PondCurrent;
-        const history = pond.history?.readings
-          ? (Object.values(pond.history.readings) as Array<Record<string, unknown>>)
-              .sort((a, b) => new Date(String(a.time)).getTime() - new Date(String(b.time)).getTime())
-              .slice(-20)
-          : [];
+      setPonds((previousPonds) => {
+        const previousCurrentMap = new Map(previousPonds.map((pond) => [pond.id, pond.current]));
 
-        return {
-          id: key,
-          current,
-          ai: (pond.ai_result?.current || {}) as PondAI,
-          history,
-          score: calculateHealthScore(current),
-        };
+        return Object.keys(data).map((key) => {
+          const pond = data[key];
+          const current = (pond.current || {}) as PondCurrent;
+          const history = pond.history?.readings
+            ? (Object.values(pond.history.readings) as Array<Record<string, unknown>>)
+                .sort((a, b) => new Date(String(a.time)).getTime() - new Date(String(b.time)).getTime())
+                .slice(-20)
+            : [];
+
+          return {
+            id: key,
+            current,
+            previousCurrent: previousCurrentMap.get(key),
+            ai: (pond.ai_result?.current || {}) as PondAI,
+            history,
+            score: calculateHealthScore(current),
+          };
+        });
       });
-
-      setPonds(nextPonds);
       setLoadingPonds(false);
     });
 

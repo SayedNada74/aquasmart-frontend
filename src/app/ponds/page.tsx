@@ -24,6 +24,7 @@ import { Stepper } from "@/components/stepper/Stepper";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChromaCard } from "@/components/effects/ChromaCard";
 import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
+import { TrendIndicator } from "@/components/monitoring/TrendIndicator";
 import { getPondIssueDetails } from "@/lib/pondIssue";
 
 interface PondData {
@@ -31,6 +32,7 @@ interface PondData {
   name_ar: string;
   name_en: string;
   current: { Temperature: number; PH: number; Ammonia: number; DO: number };
+  previousCurrent?: { Temperature: number; PH: number; Ammonia: number; DO: number };
   status: string;
   reason?: string;
   fishType: string;
@@ -112,7 +114,13 @@ export default function PondsPage() {
       } catch {
         // Ignore local storage parsing issues.
       }
-      setPonds(arr);
+      setPonds((previousPonds) => {
+        const previousCurrentMap = new Map(previousPonds.map((pond) => [pond.id, pond.current]));
+        return arr.map((pond) => ({
+          ...pond,
+          previousCurrent: previousCurrentMap.get(pond.id),
+        }));
+      });
       setLoading(false);
     });
     return () => unsub();
@@ -262,34 +270,46 @@ export default function PondsPage() {
                         <Thermometer className="w-3.5 h-3.5 text-[#f59e0b] hidden sm:block" />
                         <span className="text-[10px] text-[var(--color-text-secondary)]">{t("درجة الحرارة (°)", "Temperature (°)")}</span>
                       </div>
-                      <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <p className="text-lg font-bold text-[var(--color-text-primary)]">
                         {pond.current.Temperature?.toFixed(1)} <span className="text-[10px] text-[var(--color-text-muted)]">°C</span>
-                      </p>
+                        </p>
+                        <TrendIndicator type="temperature" current={pond.current.Temperature} previous={pond.previousCurrent?.Temperature} />
+                      </div>
                     </div>
                     <div className="p-3 rounded-lg bg-[var(--color-bg-input)] flex flex-col justify-center items-center">
                       <div className="flex items-center justify-center gap-1.5 mb-1 text-center">
                         <FlaskConical className="w-3.5 h-3.5 text-[#3b82f6] hidden sm:block" />
                         <span className="text-[10px] text-[var(--color-text-secondary)]">{t("قوة الهيدروجين (PH)", "Power of hydrogen (PH)")}</span>
                       </div>
-                      <p className="text-lg font-bold text-[var(--color-text-primary)]">{pond.current.PH?.toFixed(1)}</p>
+                      <div className="flex items-center justify-center gap-1.5">
+                        <p className="text-lg font-bold text-[var(--color-text-primary)]">{pond.current.PH?.toFixed(1)}</p>
+                        <TrendIndicator type="ph" current={pond.current.PH} previous={pond.previousCurrent?.PH} />
+                      </div>
                     </div>
                     <div className="p-3 rounded-lg bg-[var(--color-bg-input)] flex flex-col justify-center items-center">
                       <div className="flex items-center justify-center gap-1.5 mb-1 text-center">
                         <Wind className="w-3.5 h-3.5 text-[#ef4444] hidden sm:block" />
                         <span className="text-[10px] text-[var(--color-text-secondary)]">{t("الأمونيا (NH3)", "Ammonia (NH3)")}</span>
                       </div>
-                      <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <p className="text-lg font-bold text-[var(--color-text-primary)]">
                         {pond.current.Ammonia?.toFixed(2)} <span className="text-[10px] text-[var(--color-text-muted)]">ppm</span>
-                      </p>
+                        </p>
+                        <TrendIndicator type="nh3" current={pond.current.Ammonia} previous={pond.previousCurrent?.Ammonia} />
+                      </div>
                     </div>
                     <div className="p-3 rounded-lg bg-[var(--color-bg-input)] flex flex-col justify-center items-center">
                       <div className="flex items-center justify-center gap-1.5 mb-1 text-center">
                         <Droplets className="w-3.5 h-3.5 text-[#14b8a6] hidden sm:block" />
                         <span className="text-[10px] text-[var(--color-text-secondary)]">{t("الأكسجين المذاب (DO)", "Dissolved Oxygen (DO)")}</span>
                       </div>
-                      <p className="text-lg font-bold text-[var(--color-text-primary)]">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <p className="text-lg font-bold text-[var(--color-text-primary)]">
                         {pond.current.DO?.toFixed(1)} <span className="text-[10px] text-[var(--color-text-muted)]">mg/L</span>
-                      </p>
+                        </p>
+                        <TrendIndicator type="do" current={pond.current.DO} previous={pond.previousCurrent?.DO} />
+                      </div>
                     </div>
                   </div>
 
