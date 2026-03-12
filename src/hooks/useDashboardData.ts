@@ -6,6 +6,7 @@ import { database } from "@/lib/firebase";
 import { fetchWeather, WeatherData } from "@/lib/weather/weatherService";
 import { calculateAverageHealth, calculateHealthScore, getHealthStatus, type WaterReadings } from "@/lib/farmHealth";
 import { generateDashboardSummary, type BilingualSummary } from "@/lib/dashboardSummary";
+import { getPreviousReadingFromHistory } from "@/lib/trend";
 import type { ScheduledTask } from "@/lib/taskScheduleService";
 
 interface PondCurrent extends WaterReadings {
@@ -84,7 +85,7 @@ export function useDashboardData(location?: string) {
           return {
             id: key,
             current,
-            previousCurrent: previousCurrentMap.get(key),
+            previousCurrent: previousCurrentMap.get(key) || getPreviousReadingFromHistory(history),
             ai: (pond.ai_result?.current || {}) as PondAI,
             history,
             score: calculateHealthScore(current),

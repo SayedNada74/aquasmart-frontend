@@ -26,6 +26,7 @@ import { ChromaCard } from "@/components/effects/ChromaCard";
 import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
 import { TrendIndicator } from "@/components/monitoring/TrendIndicator";
 import { getPondIssueDetails } from "@/lib/pondIssue";
+import { getPreviousReadingFromHistory } from "@/lib/trend";
 
 interface PondData {
   id: string;
@@ -94,11 +95,17 @@ export default function PondsPage() {
       if (data) {
         Object.keys(data).forEach((key, idx) => {
           const c = data[key].current || { Temperature: 0, PH: 0, Ammonia: 0, DO: 0 };
+          const rawHistory = data[key].history?.readings
+            ? (Object.values(data[key].history.readings) as Array<Record<string, unknown>>).sort(
+                (a, b) => new Date(String(a.time)).getTime() - new Date(String(b.time)).getTime(),
+              )
+            : [];
           arr.push({
             id: key,
             name_ar: `حوض رقم ${idx + 1}`,
             name_en: `Pond #${idx + 1}`,
             current: c,
+            previousCurrent: getPreviousReadingFromHistory(rawHistory),
             status: data[key].ai_result?.current?.Status || "Safe",
             reason: data[key].ai_result?.current?.Reason || "",
             fishType: idx === 0 ? "Tilapia" : idx === 1 ? "Mullet" : "Sea Bass",
@@ -118,7 +125,7 @@ export default function PondsPage() {
         const previousCurrentMap = new Map(previousPonds.map((pond) => [pond.id, pond.current]));
         return arr.map((pond) => ({
           ...pond,
-          previousCurrent: previousCurrentMap.get(pond.id),
+          previousCurrent: previousCurrentMap.get(pond.id) || pond.previousCurrent,
         }));
       });
       setLoading(false);

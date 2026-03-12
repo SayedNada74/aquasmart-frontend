@@ -8,6 +8,13 @@ export interface SensorTrendResult {
   delta: number;
 }
 
+export interface TrendComparableReading {
+  Temperature: number;
+  PH: number;
+  Ammonia: number;
+  DO: number;
+}
+
 const thresholds: Record<SensorTrendSensor, number> = {
   temperature: 0.3,
   ph: 0.05,
@@ -51,5 +58,44 @@ export function getSensorTrend(
     direction: delta > 0 ? "up" : "down",
     tone: "neutral",
     delta,
+  };
+}
+
+function readNumber(source: Record<string, unknown>, ...keys: string[]) {
+  for (const key of keys) {
+    const value = source[key];
+    if (typeof value === "number") {
+      return value;
+    }
+  }
+
+  return undefined;
+}
+
+export function getPreviousReadingFromHistory(history: Array<Record<string, unknown>>): TrendComparableReading | undefined {
+  if (!history.length) {
+    return undefined;
+  }
+
+  const lastReading = history[history.length - 1];
+  const Temperature = readNumber(lastReading, "Temperature", "T");
+  const PH = readNumber(lastReading, "PH", "pH");
+  const Ammonia = readNumber(lastReading, "Ammonia", "NH3");
+  const DO = readNumber(lastReading, "DO");
+
+  if (
+    typeof Temperature !== "number" &&
+    typeof PH !== "number" &&
+    typeof Ammonia !== "number" &&
+    typeof DO !== "number"
+  ) {
+    return undefined;
+  }
+
+  return {
+    Temperature: Temperature ?? 0,
+    PH: PH ?? 0,
+    Ammonia: Ammonia ?? 0,
+    DO: DO ?? 0,
   };
 }
