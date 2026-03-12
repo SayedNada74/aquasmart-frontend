@@ -18,6 +18,7 @@ import {
 import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
+import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { getHealthStatus } from "@/lib/farmHealth";
 import { useDashboardData } from "@/hooks/useDashboardData";
@@ -393,11 +394,14 @@ export default function DashboardPage() {
           </div>
 
           <div className="xl:col-span-3 space-y-6">
-            <div className="flex items-center gap-2 mb-2">
-              <Radio className="w-5 h-5 text-[var(--color-cyan)]" />
-              <h3 className="text-base font-bold text-[var(--color-text-primary)]">
-                {active ? t(`بيانات الحوض المباشرة (#${active.id.replace("pond_", "")})`, `Live Pond Data (#${active.id.replace("pond_", "")})`) : t("بيانات الحوض المباشرة", "Live Pond Data")}
-              </h3>
+            <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
+              <div className="flex items-center gap-2">
+                <Radio className="w-5 h-5 text-[var(--color-cyan)]" />
+                <h3 className="text-base font-bold text-[var(--color-text-primary)]">
+                  {active ? t(`بيانات الحوض المباشرة (#${active.id.replace("pond_", "")})`, `Live Pond Data (#${active.id.replace("pond_", "")})`) : t("بيانات الحوض المباشرة", "Live Pond Data")}
+                </h3>
+              </div>
+              <LiveDataIndicator path={active ? `ponds/${active.id}/current` : "ponds"} />
             </div>
 
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">

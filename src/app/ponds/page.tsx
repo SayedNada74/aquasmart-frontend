@@ -13,6 +13,7 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { Stepper } from "@/components/stepper/Stepper";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChromaCard } from "@/components/effects/ChromaCard";
+import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
 
 interface PondData {
     id: string;
@@ -169,7 +170,7 @@ export default function PondsPage() {
                     <button onClick={() => setShowModal(true)} className="btn-primary text-sm flex items-center gap-2">
                         <Plus className="w-4 h-4" /> {t("إضافة حوض جديد", "Add New Pond")}
                     </button>
-                    <div className="flex items-center gap-3">
+                    <div className="flex items-center gap-3 flex-wrap">
                         <div className="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-lg px-3 py-1.5">
                             {t(`إجمالي: ${ponds.length} حوض`, `Total: ${ponds.length} ponds`)}
                         </div>
@@ -177,6 +178,7 @@ export default function PondsPage() {
                             <Waves className="w-6 h-6 text-[var(--color-cyan)]" />
                             {t("إدارة الأحواض", "Ponds Management")}
                         </h2>
+                        <LiveDataIndicator path="ponds" />
                     </div>
                 </div>
 
