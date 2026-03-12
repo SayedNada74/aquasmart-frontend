@@ -5,15 +5,19 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Legend } fro
 import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { useState, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { useMarketData } from "@/hooks/useMarketData";
 import { generateSimulationReport, SimulationReport } from "@/lib/market/marketDataService";
 import { MarketSimulationModal } from "@/components/market/MarketSimulationModal";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 export default function MarketPage() {
     const { t, lang } = useApp();
+    const searchParams = useSearchParams();
     const { loading, data, refreshMarketData } = useMarketData();
     const [simModalOpen, setSimModalOpen] = useState(false);
     const [activeReport, setActiveReport] = useState<SimulationReport | null>(null);
+    const { highlightedSection, registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, ["prices", "refresh", "guide", "harvest"]);
 
     const isRtl = lang === "ar";
 
@@ -82,7 +86,7 @@ export default function MarketPage() {
                 </div>
 
                 {/* Market Prices */}
-                <div>
+                <div ref={registerSectionRef("prices")} className={getSectionHighlightClass("prices")}>
                     <div className="flex items-center justify-between mb-4">
                         <p className="text-[10px] text-[var(--color-text-muted)]">{t(`آخر تحديث: ${relativeUpdateTime}`, `Last update: ${relativeUpdateTime}`)}</p>
                         <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2">
@@ -109,7 +113,7 @@ export default function MarketPage() {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <div className="card">
+                    <div ref={registerSectionRef("harvest")} className={`card ${highlightedSection === "guide" ? getSectionHighlightClass("guide") : getSectionHighlightClass("harvest")}`}>
                         <h4 className="text-sm font-bold text-[var(--color-text-primary)] mb-4">{t("تخطيط الحصاد الذكي", "Smart Harvest Planning")}</h4>
                         <div className="space-y-4">
                             {data.harvestPlan.map((h, i) => (
@@ -154,7 +158,7 @@ export default function MarketPage() {
                     </div>
                 </div>
 
-                <div className="flex justify-start">
+                <div ref={registerSectionRef("refresh")} className={`flex justify-start ${getSectionHighlightClass("refresh")} rounded-xl`}>
                     <button
                         onClick={refreshMarketData}
                         disabled={loading}

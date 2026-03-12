@@ -25,6 +25,7 @@ import { useAuth } from "@/lib/auth/AuthProvider";
 import { getHealthStatus } from "@/lib/farmHealth";
 import { getPondIssueDetails } from "@/lib/pondIssue";
 import { useDashboardData } from "@/hooks/useDashboardData";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 type RecommendationSeverity = "safe" | "warning" | "danger";
 
@@ -36,6 +37,11 @@ export default function DashboardPage() {
   const [activePond, setActivePond] = useState("pond_1");
   const [highlightedMetric, setHighlightedMetric] = useState<string | null>(null);
   const metricRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const { registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, [
+    "live-data",
+    "ai-recommendation",
+    "recent-alerts",
+  ]);
 
   useEffect(() => {
     if (!ponds.length) return;
@@ -299,7 +305,7 @@ export default function DashboardPage() {
                 <p className="text-2xl font-bold text-[var(--color-text-primary)]">{stat.value}</p>
               </div>
               <div className={`w-10 h-10 rounded-lg ${stat.iconBg} flex items-center justify-center`}>{stat.icon}</div>
-            </MotionCard>
+              </MotionCard>
           ))}
         </div>
 
@@ -355,7 +361,7 @@ export default function DashboardPage() {
               </div>
             </MotionCard>
 
-            <div className="card">
+            <div ref={registerSectionRef("recent-alerts")} className={`card ${getSectionHighlightClass("recent-alerts")}`}>
               <h3 className="text-sm font-semibold text-[var(--color-text-primary)] mb-4 flex items-center gap-2">
                 <Clock className="w-4 h-4 text-[var(--color-text-secondary)]" />
                 {t("التنبيهات الأخيرة", "Recent Alerts")}
@@ -391,6 +397,7 @@ export default function DashboardPage() {
           </div>
 
           <div className="xl:col-span-3 space-y-6">
+            <div ref={registerSectionRef("live-data")} className={getSectionHighlightClass("live-data")}>
             <div className="flex items-center justify-between gap-3 mb-2 flex-wrap">
               <div className="flex items-center gap-2">
                 <Radio className="w-5 h-5 text-[var(--color-cyan)]" />
@@ -432,8 +439,10 @@ export default function DashboardPage() {
                 </div>
               ))}
             </div>
+            </div>
 
-            <MotionCard className={`bg-gradient-to-l ${recommendationStyles.card} border rounded-xl p-5 flex items-start gap-4`}>
+            <div ref={registerSectionRef("ai-recommendation")}>
+              <MotionCard className={`bg-gradient-to-l ${recommendationStyles.card} border rounded-xl p-5 flex items-start gap-4 ${getSectionHighlightClass("ai-recommendation")}`}>
               <div className={`w-12 h-12 rounded-xl ${recommendationStyles.icon} flex items-center justify-center flex-shrink-0`}>
                 <Sparkles className={`w-6 h-6 ${recommendationStyles.iconColor}`} />
               </div>
@@ -442,7 +451,8 @@ export default function DashboardPage() {
                 <p className="text-[11px] text-[var(--color-text-muted)] mb-2">{t(pondIssue.reasonAr, pondIssue.reasonEn)}</p>
                 <p className="text-sm text-[var(--color-text-secondary)] leading-relaxed">{t(recommendation.ar, recommendation.en)}</p>
               </div>
-            </MotionCard>
+              </MotionCard>
+            </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
               <div className="card">

@@ -2,7 +2,7 @@
 
 import { User, Bell, Shield, Sparkles, LogOut, Save, X, Settings as Cog, Plus, Zap, Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { useApp } from "@/lib/AppContext";
 import { useAuth } from "@/lib/auth/AuthProvider";
 import { PageTransition } from "@/components/motion/PageTransition";
@@ -11,10 +11,12 @@ import { ref, update } from "firebase/database";
 import { UpdatePasswordModal } from "@/components/auth/UpdatePasswordModal";
 import { UpgradePlanModal } from "@/components/settings/UpgradePlanModal";
 import { TwoFactorModal } from "@/components/settings/TwoFactorModal";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 export default function SettingsPage() {
     const { t, lang, setUserName, lowPowerMode, setLowPowerMode, dir } = useApp();
     const router = useRouter();
+    const searchParams = useSearchParams();
     const { profile: authProfile, refreshUser, user: firebaseUser, loading: authLoading } = useAuth();
 
     const [saving, setSaving] = useState(false);
@@ -44,6 +46,7 @@ export default function SettingsPage() {
 
     const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
     const [newFishType, setNewFishType] = useState("");
+    const { registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, ["plan", "security"]);
 
     // Update state when auth profile loads
     useEffect(() => {
@@ -233,7 +236,7 @@ export default function SettingsPage() {
                         </div>
 
                         {/* Plan */}
-                        <div className="card border-2 border-[var(--color-cyan)]/20 bg-gradient-to-t from-[var(--color-cyan)]/5 to-transparent relative overflow-hidden group">
+                        <div ref={registerSectionRef("plan")} className={`card border-2 border-[var(--color-cyan)]/20 bg-gradient-to-t from-[var(--color-cyan)]/5 to-transparent relative overflow-hidden group ${getSectionHighlightClass("plan")}`}>
                             <div className="absolute top-0 right-0 p-3 opacity-10 group-hover:rotate-12 transition-transform">
                                 <Sparkles className="w-20 h-20 text-[var(--color-cyan)]" />
                             </div>
@@ -254,7 +257,7 @@ export default function SettingsPage() {
                     {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Personal Info */}
-                        <div className="card">
+                        <div ref={registerSectionRef("security")} className={`card ${getSectionHighlightClass("security")}`}>
                             <div className="flex items-center justify-between mb-6">
                                 <div className="flex items-center gap-2">
                                     <User className="w-4 h-4 text-[#3b82f6]" />

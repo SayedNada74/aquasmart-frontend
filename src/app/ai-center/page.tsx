@@ -1,16 +1,19 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import { Send, Bot, User, Upload, Camera, Sparkles, Loader2, Radio, FileText, Shield, BarChart3, Lightbulb, X } from "lucide-react";
 import { database } from "@/lib/firebase";
 import { ref, get } from "firebase/database";
 import { useApp } from "@/lib/AppContext";
 import { PageTransition } from "@/components/motion/PageTransition";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 interface Message { role: "user" | "ai"; content: string; image?: string; }
 
 export default function AICenterPage() {
     const { t, lang } = useApp();
+    const searchParams = useSearchParams();
     const [messages, setMessages] = useState<Message[]>([]);
     const [input, setInput] = useState("");
     const [isLoading, setIsLoading] = useState(false);
@@ -24,6 +27,7 @@ export default function AICenterPage() {
     const msgEnd = useRef<HTMLDivElement>(null);
     const fileRef = useRef<HTMLInputElement>(null);
     const chatFileRef = useRef<HTMLInputElement>(null);
+    const { registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, ["vision", "status"]);
 
     useEffect(() => {
         const fetchCtx = async () => {
@@ -196,7 +200,7 @@ export default function AICenterPage() {
                     </div>
 
                     {/* Image Diagnosis */}
-                    <div className="card">
+                    <div ref={registerSectionRef("vision")} className={`card ${getSectionHighlightClass("vision")}`}>
                         <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2 mb-3 justify-end">
                             {t("تشخيص الأمراض بالصور", "Image Disease Diagnosis")}
                             <Camera className="w-4 h-4 text-[var(--color-cyan)]" />
@@ -236,7 +240,7 @@ export default function AICenterPage() {
 
                     {/* Pond Status */}
                     {pondsContext && (
-                        <div className="card p-4">
+                        <div ref={registerSectionRef("status")} className={`card p-4 ${getSectionHighlightClass("status")}`}>
                             <h3 className="text-xs font-bold text-[var(--color-text-primary)] mb-3 flex items-center gap-2 justify-end">
                                 {t("حالة الأحواض الحية", "Live Pond Status")}
                                 <Radio className="w-3.5 h-3.5 text-[var(--color-cyan)]" />

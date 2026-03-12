@@ -4,15 +4,19 @@ import { BarChart3, Download, Sparkles, Loader2, AlertTriangle, TrendingUp, Drop
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, LineChart, Line } from "recharts";
 import { useApp } from "@/lib/AppContext";
 import { useState } from "react";
+import { useSearchParams } from "next/navigation";
 import { PageTransition } from "@/components/motion/PageTransition";
 import { useReportsData, ReportPeriod } from "@/hooks/useReportsData";
 import { generateFarmPDF } from "@/lib/generateFarmPDF";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 export default function ReportsPage() {
     const { t, lang } = useApp();
+    const searchParams = useSearchParams();
     const [period, setPeriod] = useState<ReportPeriod>("monthly");
     const [exporting, setExporting] = useState(false);
     const [exportDone, setExportDone] = useState(false);
+    const { registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, ["export"]);
 
     const data = useReportsData(period);
 
@@ -83,7 +87,7 @@ export default function ReportsPage() {
                     </div>
                 )}
 
-                <div className="flex items-center justify-between flex-wrap gap-4">
+                <div ref={registerSectionRef("export")} className={`flex items-center justify-between flex-wrap gap-4 ${getSectionHighlightClass("export")} rounded-xl`}>
                     <div className="flex gap-2 bg-[var(--color-bg-card)] p-1 rounded-xl border border-[var(--color-border)] shadow-sm">
                         <button
                             onClick={() => setPeriod("monthly")}

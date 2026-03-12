@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   Clock,
   Droplets,
@@ -20,6 +21,7 @@ import { PageTransition } from "@/components/motion/PageTransition";
 import { MotionCard } from "@/components/motion/MotionCard";
 import { TaskScheduleModal } from "@/components/control/TaskScheduleModal";
 import { useScheduledTasks } from "@/hooks/useScheduledTasks";
+import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 import { createManualControlLog, type ControlDevice, type ScheduledTask } from "@/lib/taskScheduleService";
 
 interface ControlLog {
@@ -45,6 +47,7 @@ const feederUnits = [
 
 export default function ControlPage() {
   const { t, lang } = useApp();
+  const searchParams = useSearchParams();
   const [devices, setDevices] = useState<ControlDevice[]>([]);
   const [logs, setLogs] = useState<ControlLog[]>([]);
   const [loadingDevices, setLoadingDevices] = useState(true);
@@ -55,6 +58,13 @@ export default function ControlPage() {
 
   const { tasks, loading, saving, runningTaskId, mutatingTaskId, error, saveTask, runTaskNow, removeTask, setTaskEnabled, clearError } =
     useScheduledTasks(devices);
+  const { registerSectionRef, getSectionHighlightClass } = useSectionSearchFocus(searchParams, [
+    "aeration",
+    "pumps",
+    "feeding",
+    "schedule",
+    "logs",
+  ]);
 
   useEffect(() => {
     const devicesRef = ref(database, "control/devices");
@@ -259,7 +269,7 @@ export default function ControlPage() {
           </div>
         </MotionCard>
 
-        <div>
+        <div ref={registerSectionRef("aeration")} className={getSectionHighlightClass("aeration")}>
           <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2 mb-4">
             <Wind className="w-5 h-5 text-[var(--color-cyan)]" />
             {t("بدالات الأكسجين المذاب (DO) (Aerators)", "Dissolved Oxygen (DO) Aerators")}
@@ -291,7 +301,7 @@ export default function ControlPage() {
           </div>
         </div>
 
-        <div>
+        <div ref={registerSectionRef("pumps")} className={getSectionHighlightClass("pumps")}>
           <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2 mb-4">
             <Droplets className="w-5 h-5 text-[#3b82f6]" />
             {t("مضخات المياه (Water Pumps)", "Water Pumps")}
@@ -319,7 +329,7 @@ export default function ControlPage() {
           </div>
         </div>
 
-        <div>
+        <div ref={registerSectionRef("feeding")} className={getSectionHighlightClass("feeding")}>
           <h3 className="text-base font-bold text-[var(--color-text-primary)] flex items-center gap-2 mb-4">
             <Utensils className="w-5 h-5 text-[#f59e0b]" />
             {t("وحدات التغذية التلقائية", "Auto-Feeding Units")}
@@ -344,7 +354,7 @@ export default function ControlPage() {
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          <div className="card">
+          <div ref={registerSectionRef("schedule")} className={`card ${getSectionHighlightClass("schedule")}`}>
             <div className="flex items-center justify-between mb-4">
               <button
                 onClick={handleOpenCreate}
@@ -454,7 +464,7 @@ export default function ControlPage() {
             </div>
           </div>
 
-          <div className="card">
+          <div ref={registerSectionRef("logs")} className={`card ${getSectionHighlightClass("logs")}`}>
             <h3 className="text-sm font-bold text-[var(--color-text-primary)] flex items-center gap-2 mb-4">
               <Clock className="w-4 h-4 text-[var(--color-text-secondary)]" />
               {t("سجل العمليات", "Operation Log")}
