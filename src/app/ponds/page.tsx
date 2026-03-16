@@ -27,6 +27,7 @@ import { LiveDataIndicator } from "@/components/monitoring/LiveDataIndicator";
 import { TrendIndicator } from "@/components/monitoring/TrendIndicator";
 import { getPondIssueDetails } from "@/lib/pondIssue";
 import { getPreviousReadingFromHistory } from "@/lib/trend";
+import { Skeleton, PondCardSkeleton } from "@/components/ui/Skeleton";
 
 interface PondData {
   id: string;
@@ -185,9 +186,22 @@ export default function PondsPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center">
-        <div className="w-14 h-14 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
-      </div>
+      <PageTransition>
+        <div className="space-y-6 pb-8">
+          <div className="flex items-center justify-between flex-wrap gap-3">
+            <Skeleton className="h-10 w-40 rounded-xl" />
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-8 w-24 rounded-lg" />
+              <Skeleton className="h-8 w-40 rounded-lg" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <PondCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+      </PageTransition>
     );
   }
 

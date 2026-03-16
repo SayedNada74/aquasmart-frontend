@@ -26,6 +26,7 @@ import { getHealthStatus } from "@/lib/farmHealth";
 import { getPondIssueDetails } from "@/lib/pondIssue";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
+import { Skeleton, DashboardHeaderSkeleton, StatCardSkeleton, PondCardSkeleton, AlertsSkeleton } from "@/components/ui/Skeleton";
 
 type RecommendationSeverity = "safe" | "warning" | "danger";
 
@@ -243,9 +244,49 @@ export default function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="flex h-full items-center justify-center min-h-[500px]">
-        <div className="w-14 h-14 border-4 border-[var(--color-cyan)] border-t-transparent rounded-full animate-spin" />
-      </div>
+      <PageTransition>
+        <div className="space-y-6 pb-8">
+          {/* Header Skeleton */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            <Skeleton className="lg:col-span-2 h-40 rounded-2xl" />
+            <Skeleton className="card h-40 rounded-2xl" />
+          </div>
+
+          {/* Stats Skeletons */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {[1, 2, 3, 4].map((i) => (
+              <StatCardSkeleton key={i} />
+            ))}
+          </div>
+
+          {/* Pond Selector Skeleton */}
+          <div className="flex gap-2">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-10 w-24 rounded-lg" />
+            ))}
+          </div>
+
+          {/* Main Content Skeleton */}
+          <div className="grid grid-cols-1 xl:grid-cols-4 gap-6">
+            <div className="xl:col-span-1 space-y-6">
+              <Skeleton className="h-80 w-full rounded-2xl" />
+              <AlertsSkeleton />
+            </div>
+            <div className="xl:col-span-3 space-y-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                {[1, 2, 3, 4].map((i) => (
+                  <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+                ))}
+              </div>
+              <Skeleton className="h-40 w-full rounded-2xl" />
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <Skeleton className="h-60 w-full rounded-2xl" />
+                <Skeleton className="h-60 w-full rounded-2xl" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </PageTransition>
     );
   }
 

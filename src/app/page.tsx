@@ -306,9 +306,11 @@ export default function LandingPage() {
                 {/* ===== FOOTER ===== */}
                 <footer className="border-t border-[var(--color-border)] py-8 mt-10">
                     <div className="max-w-7xl mx-auto px-6 md:px-12 flex items-center justify-between text-sm text-[var(--color-text-muted)] flex-row-reverse md:flex-row gap-6">
-                        <div className="flex gap-6">
+                        <div className="flex gap-4 md:gap-6 flex-wrap justify-center">
                             <a href="#features" className="hover:text-[var(--color-text-primary)] transition-colors">{t("المميزات", "Features")}</a>
                             <a href="#ai" className="hover:text-[var(--color-text-primary)] transition-colors">{t("الذكاء الاصطناعي", "AI")}</a>
+                            <Link href="/terms" className="hover:text-[var(--color-text-primary)] transition-colors">{t("الشروط", "Terms")}</Link>
+                            <Link href="/privacy" className="hover:text-[var(--color-text-primary)] transition-colors">{t("الخصوصية", "Privacy")}</Link>
                             <button onClick={() => setIsContactOpen(true)} className="hover:text-[var(--color-text-primary)] transition-colors">{t("تواصل", "Contact")}</button>
                         </div>
                         <p className="whitespace-nowrap">
