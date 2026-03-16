@@ -25,11 +25,77 @@ const WEATHER_CODE_MAP: Record<number, "sunny" | "cloudy" | "rainy" | "windy"> =
   95: "windy",
 };
 
+// Map common Arabic Egyptian location names to English for geocoding
+const ARABIC_TO_ENGLISH_LOCATIONS: Record<string, string> = {
+  "القاهرة": "Cairo",
+  "الإسكندرية": "Alexandria, Egypt",
+  "الاسكندرية": "Alexandria, Egypt",
+  "اسكندرية": "Alexandria, Egypt",
+  "الجيزة": "Giza, Egypt",
+  "الإسماعيلية": "Ismailia, Egypt",
+  "الاسماعيلية": "Ismailia, Egypt",
+  "اسماعيلية": "Ismailia, Egypt",
+  "بورسعيد": "Port Said, Egypt",
+  "السويس": "Suez, Egypt",
+  "دمياط": "Damietta, Egypt",
+  "المنصورة": "Mansoura, Egypt",
+  "الدقهلية": "Dakahlia, Egypt",
+  "الشرقية": "Zagazig, Egypt",
+  "المنوفية": "Menofia, Egypt",
+  "الغربية": "Tanta, Egypt",
+  "طنطا": "Tanta, Egypt",
+  "كفر الشيخ": "Kafr el-Sheikh, Egypt",
+  "البحيرة": "Beheira, Egypt",
+  "رشيد": "Rosetta, Egypt",
+  "الفيوم": "Fayoum, Egypt",
+  "بني سويف": "Beni Suef, Egypt",
+  "المنيا": "Minya, Egypt",
+  "أسيوط": "Asyut, Egypt",
+  "سوهاج": "Sohag, Egypt",
+  "قنا": "Qena, Egypt",
+  "الأقصر": "Luxor, Egypt",
+  "أسوان": "Aswan, Egypt",
+  "البحر الأحمر": "Hurghada, Egypt",
+  "الغردقة": "Hurghada, Egypt",
+  "مطروح": "Marsa Matrouh, Egypt",
+  "شمال سيناء": "El Arish, Egypt",
+  "العريش": "El Arish, Egypt",
+  "جنوب سيناء": "Sharm El Sheikh, Egypt",
+  "شرم الشيخ": "Sharm El Sheikh, Egypt",
+  "الوادي الجديد": "Kharga, Egypt",
+  "مصر": "Cairo",
+};
+
+function resolveLocationName(location: string): string {
+  const trimmed = location.trim();
+
+  // Check direct Arabic mapping
+  if (ARABIC_TO_ENGLISH_LOCATIONS[trimmed]) {
+    return ARABIC_TO_ENGLISH_LOCATIONS[trimmed];
+  }
+
+  // Check partial Arabic match
+  for (const [arabic, english] of Object.entries(ARABIC_TO_ENGLISH_LOCATIONS)) {
+    if (trimmed.includes(arabic) || arabic.includes(trimmed)) {
+      return english;
+    }
+  }
+
+  // If it's already in English, add Egypt suffix for better accuracy
+  if (/^[a-zA-Z\s]+$/.test(trimmed) && !trimmed.toLowerCase().includes("egypt")) {
+    return `${trimmed}, Egypt`;
+  }
+
+  return trimmed;
+}
+
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const location = searchParams.get("location") || "Default";
+  const rawLocation = searchParams.get("location") || "Default";
   const avgTempParam = searchParams.get("avgTemp");
   const avgTemp = avgTempParam ? Number(avgTempParam) : undefined;
+
+  const location = resolveLocationName(rawLocation);
 
   try {
     const geocodeUrl = new URL("https://geocoding-api.open-meteo.com/v1/search");
@@ -98,7 +164,7 @@ export async function GET(request: Request) {
       source: "api",
     });
   } catch {
-    const fallback = deriveWeatherFromContext(location, avgTemp);
+    const fallback = deriveWeatherFromContext(rawLocation, avgTemp);
     return NextResponse.json({
       ok: true,
       ...fallback,
