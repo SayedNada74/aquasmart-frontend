@@ -18,7 +18,7 @@ function InnerLayout({ children }: { children: React.ReactNode }) {
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     // Landing page (root) and other full-page auth routes
-    const isFullPage = pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/verify-email" || pathname === "/forgot-password";
+    const isFullPage = pathname === "/" || pathname === "/login" || pathname === "/register" || pathname === "/verify-email" || pathname === "/forgot-password" || pathname.startsWith("/auth/");
 
     if (isFullPage) {
         return (
