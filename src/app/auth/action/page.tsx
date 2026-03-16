@@ -17,7 +17,7 @@ function AuthActionContent() {
     const mode = searchParams.get("mode");
     const oobCode = searchParams.get("oobCode");
 
-    const [status, setStatus] = useState<"loading" | "success" | "error" | "reset-form">("loading");
+    const [status, setStatus] = useState<"ready" | "loading" | "success" | "error" | "reset-form">("ready");
     const [errorMsg, setErrorMsg] = useState("");
 
     // Password reset states
@@ -32,28 +32,30 @@ function AuthActionContent() {
             setErrorMsg(t("رابط غير صالح أو منتهي الصلاحية.", "Invalid or expired link."));
             return;
         }
-
-        if (mode === "verifyEmail") {
-            applyActionCode(auth, oobCode)
-                .then(() => {
-                    setStatus("success");
-                    // Auto-redirect to login after 3 seconds
-                    setTimeout(() => router.push("/login"), 3000);
-                })
-                .catch(() => {
-                    setStatus("error");
-                    setErrorMsg(t(
-                        "رابط التأكيد غير صالح أو تم استخدامه بالفعل.",
-                        "Verification link is invalid or already used."
-                    ));
-                });
-        } else if (mode === "resetPassword") {
+        if (mode === "resetPassword") {
             setStatus("reset-form");
-        } else {
+        } else if (mode !== "verifyEmail") {
             setStatus("error");
             setErrorMsg(t("إجراء غير معروف.", "Unknown action."));
         }
+        // For verifyEmail: stay "ready", user clicks button to verify
     }, [mode, oobCode]);
+
+    const handleVerifyEmail = async () => {
+        if (!oobCode) return;
+        setStatus("loading");
+        try {
+            await applyActionCode(auth, oobCode);
+            setStatus("success");
+            setTimeout(() => router.push("/login"), 3000);
+        } catch {
+            setStatus("error");
+            setErrorMsg(t(
+                "رابط التأكيد غير صالح أو تم استخدامه بالفعل.",
+                "Verification link is invalid or already used."
+            ));
+        }
+    };
 
     const handlePasswordReset = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -85,6 +87,27 @@ function AuthActionContent() {
         }
     };
 
+    // --- READY: Verify Email (user clicks button) ---
+    if (status === "ready" && mode === "verifyEmail") {
+        return (
+            <div className="w-full card text-center p-8 animate-in zoom-in-95 duration-500">
+                <div className="w-24 h-24 bg-[var(--color-cyan)]/10 text-[var(--color-cyan-dark)] rounded-full flex items-center justify-center mx-auto mb-6">
+                    <Mail className="w-12 h-12" />
+                </div>
+                <h2 className="text-2xl font-bold text-[var(--color-text-primary)] mb-4">
+                    {t("تأكيد البريد الإلكتروني", "Verify Your Email")}
+                </h2>
+                <p className="text-sm text-[var(--color-text-secondary)] mb-8">
+                    {t("اضغط على الزر بالأسفل لتأكيد حسابك", "Click the button below to verify your account")}
+                </p>
+                <button onClick={handleVerifyEmail} className="btn-primary w-full py-3 text-base flex items-center justify-center gap-2">
+                    <CheckCircle className="w-5 h-5" />
+                    {t("تأكيد حسابي الآن", "Verify My Account Now")}
+                </button>
+            </div>
+        );
+    }
+
     // --- LOADING ---
     if (status === "loading") {
         return (
@@ -100,7 +123,7 @@ function AuthActionContent() {
         );
     }
 
-    // --- SUCCESS (verification or password reset) ---
+    // --- SUCCESS ---
     if (status === "success") {
         const isVerify = mode === "verifyEmail";
         return (
@@ -150,16 +173,8 @@ function AuthActionContent() {
                             {t("كلمة المرور الجديدة", "New Password")}
                         </label>
                         <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={newPassword}
-                                onChange={(e) => setNewPassword(e.target.value)}
-                                required
-                                minLength={6}
-                                placeholder="••••••••"
-                                className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)]`}
-                                dir="ltr"
-                            />
+                            <input type={showPassword ? "text" : "password"} value={newPassword} onChange={(e) => setNewPassword(e.target.value)} required minLength={6} placeholder="••••••••"
+                                className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)]`} dir="ltr" />
                             <Lock className={`absolute top-3.5 w-4 h-4 text-[var(--color-text-muted)] ${lang === "ar" ? "right-3" : "left-3"}`} />
                             <button type="button" onClick={() => setShowPassword(!showPassword)} className={`absolute top-3.5 text-[var(--color-text-muted)] ${lang === "ar" ? "left-3" : "right-3"}`}>
                                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -172,16 +187,8 @@ function AuthActionContent() {
                             {t("تأكيد كلمة المرور", "Confirm Password")}
                         </label>
                         <div className="relative">
-                            <input
-                                type={showPassword ? "text" : "password"}
-                                value={confirmPassword}
-                                onChange={(e) => setConfirmPassword(e.target.value)}
-                                required
-                                minLength={6}
-                                placeholder="••••••••"
-                                className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)]`}
-                                dir="ltr"
-                            />
+                            <input type={showPassword ? "text" : "password"} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} required minLength={6} placeholder="••••••••"
+                                className={`w-full bg-[var(--color-bg-input)] border border-[var(--color-border)] rounded-xl px-10 py-3 text-sm text-[var(--color-text-primary)] ${lang === "ar" ? "text-right" : "text-left"} focus:outline-none focus:border-[var(--color-cyan-dark)]`} dir="ltr" />
                             <Lock className={`absolute top-3.5 w-4 h-4 text-[var(--color-text-muted)] ${lang === "ar" ? "right-3" : "left-3"}`} />
                         </div>
                     </div>
