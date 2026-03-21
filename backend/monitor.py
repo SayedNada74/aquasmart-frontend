@@ -5,6 +5,9 @@ import firebase_admin
 from firebase_admin import credentials, db
 from services.ai_evaluator import AIEvaluator
 import requests
+import threading
+import http.server
+import socketserver
 
 # --- Configuration (Prod-ready) ---
 FIREBASE_URL = os.getenv("FIREBASE_URL", "https://aquasmart-system-default-rtdb.firebaseio.com")
@@ -74,7 +77,18 @@ def process_pond_data(pond_id, data):
         
     last_processed_timestamp[pond_id] = ts
 
+def start_health_server():
+    """Minimal server to satisfy Render's health check on the Free Tier"""
+    port = int(os.getenv("PORT", 10000))
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        print(f"📡 Health check server running on port {port}")
+        httpd.serve_forever()
+
 def monitor_loop():
+    # Start health server in a separate thread
+    threading.Thread(target=start_health_server, daemon=True).start()
+    
     print("🚀 AquaSmart AI Monitor Running...")
     while True:
         try:

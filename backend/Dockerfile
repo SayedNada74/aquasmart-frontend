@@ -14,5 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source code
 COPY . .
 
+# Expose port for Render Web Service (Free Tier requirement)
+EXPOSE 10000
+
 # Default command runs the monitor
 CMD ["python", "monitor.py"]
