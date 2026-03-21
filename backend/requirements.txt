@@ -1,0 +1,5 @@
+firebase-admin==6.5.0
+numpy
+tflite-runtime
+requests
+python-dotenv

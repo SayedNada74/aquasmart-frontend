@@ -1,0 +1,28 @@
+services:
+  # AI Monitor - Process sensor data in real-time
+  - type: worker
+    name: aquasmart-ai-monitor
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python monitor.py
+    envVars:
+      - key: FIREBASE_URL
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
+      - key: TELEGRAM_BOT_TOKEN
+        sync: false
+      - key: TELEGRAM_CHAT_ID
+        sync: false
+
+  # Optional Simulator (Can be disabled if using real sensors)
+  - type: worker
+    name: aquasmart-simulator
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: python simulator_run.py
+    envVars:
+      - key: FIREBASE_URL
+        sync: false
+      - key: FIREBASE_SERVICE_ACCOUNT
+        sync: false
