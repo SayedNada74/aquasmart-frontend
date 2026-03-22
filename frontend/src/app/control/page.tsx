@@ -33,10 +33,12 @@ interface ControlLog {
 }
 
 const defaultDevices: ControlDevice[] = [
-  { id: "1", name_ar: "بدالة رقم 01 - حوض أ", name_en: "Aerator #01 - Pond A", type: "aerator", active: true, consumption: "1.2 kW" },
-  { id: "2", name_ar: "بدالة رقم 02 - حوض ب", name_en: "Aerator #02 - Pond B", type: "aerator", active: false, consumption: "0 kW" },
-  { id: "3", name_ar: "مضخة التدوير المركزية", name_en: "Central Circulation Pump", type: "pump", active: true, consumption: "" },
-  { id: "4", name_ar: "مضخة الصرف - قطاع 2", name_en: "Drain Pump - Sector 2", type: "pump", active: false, consumption: "" },
+  { id: "aerator_a", name_ar: "بدالة رقم 01 - حوض أ", name_en: "Aerator - Pond A", type: "aerator", active: true, consumption: "1.2 kW" },
+  { id: "aerator_b", name_ar: "بدالة رقم 02 - حوض ب", name_en: "Aerator - Pond B", type: "aerator", active: false, consumption: "0 kW" },
+  { id: "aerator_c", name_ar: "بدالة رقم 03 - حوض ج", name_en: "Aerator - Pond C", type: "aerator", active: false, consumption: "0 kW" },
+  { id: "pump_a", name_ar: "مضخة مياه - حوض أ", name_en: "Water Pump - Pond A", type: "pump", active: true, consumption: "0 kW" },
+  { id: "pump_b", name_ar: "مضخة مياه - حوض ب", name_en: "Water Pump - Pond B", type: "pump", active: false, consumption: "0 kW" },
+  { id: "pump_c", name_ar: "مضخة مياه - حوض ج", name_en: "Water Pump - Pond C", type: "pump", active: false, consumption: "0 kW" },
 ];
 
 const feederUnits = [
@@ -73,7 +75,16 @@ export default function ControlPage() {
     const unsubDevices = onValue(devicesRef, (snapshot) => {
       const data = snapshot.val();
       if (data) {
-        const nextDevices = Object.values(data) as ControlDevice[];
+        let nextDevices = Object.values(data) as ControlDevice[];
+        // Auto-migrate to 6 devices if not set
+        if (nextDevices.length !== 6 || nextDevices.some(d => ['1', '2', '3', '4'].includes(d.id))) {
+          const newMap = defaultDevices.reduce<Record<string, ControlDevice>>((acc, device) => {
+            acc[device.id] = device;
+            return acc;
+          }, {});
+          void set(devicesRef, newMap);
+          nextDevices = defaultDevices;
+        }
         setDevices(nextDevices.sort((a, b) => a.id.localeCompare(b.id)));
       } else {
         void set(
