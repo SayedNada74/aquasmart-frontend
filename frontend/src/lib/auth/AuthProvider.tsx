@@ -36,7 +36,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if ("serviceWorker" in navigator && process.env.NODE_ENV === "production") {
             window.addEventListener("load", () => {
                 navigator.serviceWorker.register("/sw.js").then(
-                    (registration) => {},
+                    () => {},
                     (err) => console.error("SW registration failed:", err)
                 );
             });
