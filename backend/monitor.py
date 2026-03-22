@@ -45,10 +45,12 @@ def send_alert(message):
         print(f"Telegram Error: {e}")
 
 last_processed_timestamp = {pid: None for pid in PONDS}
+last_alert_time = {pid: 0 for pid in PONDS}
+ALERT_COOLDOWN_SECONDS = int(os.getenv("ALERT_COOLDOWN_SECONDS", 900)) # 15 min default
 
 def process_pond_data(pond_id, data):
     """Callback for Firebase listener or manual poll"""
-    global last_processed_timestamp
+    global last_processed_timestamp, last_alert_time
     
     current_readings = data.get("current")
     if not current_readings: return
@@ -70,10 +72,15 @@ def process_pond_data(pond_id, data):
     }
     db_ref.update(updates)
     
-    # Alerting logic
+    # Alerting logic with Cooldown
     if ai_result.get("Is_Critical"):
-        msg = f"❗ CRITICAL: {pond_id}\nStatus: {ai_result['Status']}\nReason: {ai_result['Reason']}"
-        send_alert(msg)
+        current_time = time.time()
+        if current_time - last_alert_time[pond_id] > ALERT_COOLDOWN_SECONDS:
+            msg = f"❗ CRITICAL: {pond_id}\nStatus: {ai_result['Status']}\nReason: {ai_result['Reason']}"
+            send_alert(msg)
+            last_alert_time[pond_id] = current_time
+        else:
+            print(f"⏳ Alert suppressed for {pond_id} (Cooldown Active)")
         
     last_processed_timestamp[pond_id] = ts
 
