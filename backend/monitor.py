@@ -85,11 +85,11 @@ def process_pond_data(pond_id, data):
     last_processed_timestamp[pond_id] = ts
 
 def start_health_server():
-    """Minimal server to satisfy Render's health check on the Free Tier"""
-    port = int(os.getenv("PORT", 10000))
+    """Minimal server to satisfy HuggingFace Spaces health check"""
+    port = int(os.getenv("PORT", 7860))
     handler = http.server.SimpleHTTPRequestHandler
     with socketserver.TCPServer(("", port), handler) as httpd:
-        print(f"📡 Health check server running on port {port}")
+        print(f"📡 HuggingFace Health check server running on port {port}")
         httpd.serve_forever()
 
 def monitor_loop():

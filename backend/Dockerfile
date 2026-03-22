@@ -1,21 +1,26 @@
 FROM python:3.9-slim
 
+# Create a non-root user (Required by Hugging Face Spaces)
+RUN useradd -m -u 1000 user
+
 WORKDIR /app
 
-# Install system dependencies for tflite/numpy
+# Install system dependencies
 RUN apt-get update && apt-get install -y \
     build-essential \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements and install
-COPY requirements.txt .
+# Copy and install requirements
+COPY --chown=user:user requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy source code
-COPY . .
+COPY --chown=user:user . .
 
-# Expose port for Render Web Service (Free Tier requirement)
-EXPOSE 10000
+# Switch to non-root user
+USER user
 
-# Default command runs the monitor
+# Hugging Face Spaces automatically route to port 7860
+EXPOSE 7860
+
 CMD ["python", "monitor.py"]
