@@ -22,13 +22,13 @@ export async function POST(req: Request) {
             });
         }
 
-        console.log("DEBUG: Using API Key starting with:", apiKey.substring(0, 8));
+
 
         const genAI = new GoogleGenerativeAI(apiKey);
         // Using gemini-2.5-flash based on API key permissions - excellent for multimodal
         const modelName = "gemini-2.5-flash";
         const model = genAI.getGenerativeModel({ model: modelName });
-        console.log("DEBUG: Using model:", modelName);
+
 
         const systemPrompt = `
 إنت "AquaAI" - الخبير الرقمي الأول والمساعد الذكي المتكامل لمنصة "AquaSmart AI" في مصر.
@@ -61,7 +61,7 @@ export async function POST(req: Request) {
         `;
 
         try {
-            console.log("DEBUG: Calling generateContent...");
+
 
             const promptParts: any[] = [
                 systemPrompt,
@@ -76,13 +76,13 @@ export async function POST(req: Request) {
                         mimeType: mimeType
                     }
                 });
-                console.log("DEBUG: Interacting with uploaded chat image attached.");
+
             }
 
             const result = await model.generateContent(promptParts);
             const response = await result.response;
             const text = response.text();
-            console.log("DEBUG: Success! Response length:", text.length);
+
             return NextResponse.json({ reply: text });
         } catch (genError: any) {
             console.error("DEBUG: generateContent FAILED:", genError);
