@@ -61,7 +61,8 @@ export function getSensorTrend(
   };
 }
 
-function readNumber(source: Record<string, unknown>, ...keys: string[]) {
+function readNumber(source: Record<string, unknown> | null | undefined, ...keys: string[]) {
+  if (!source) return undefined;
   for (const key of keys) {
     const value = source[key];
     if (typeof value === "number") {
@@ -72,12 +73,18 @@ function readNumber(source: Record<string, unknown>, ...keys: string[]) {
   return undefined;
 }
 
-export function getPreviousReadingFromHistory(history: Array<Record<string, unknown>>): TrendComparableReading | undefined {
-  if (!history.length) {
+export function getPreviousReadingFromHistory(history: Array<Record<string, unknown> | null>): TrendComparableReading | undefined {
+  if (!history || !Array.isArray(history) || history.length === 0) {
     return undefined;
   }
 
-  const lastReading = history[history.length - 1];
+  // Filter out any null stubs left over from firebase manual deletions
+  const validHistory = history.filter(item => item !== null && item !== undefined);
+  if (!validHistory.length) {
+    return undefined;
+  }
+
+  const lastReading = validHistory[validHistory.length - 1];
   const Temperature = readNumber(lastReading, "Temperature", "T");
   const PH = readNumber(lastReading, "PH", "pH");
   const Ammonia = readNumber(lastReading, "Ammonia", "NH3");
