@@ -76,41 +76,63 @@ export function useDashboardData(location?: string) {
   }, []);
 
   useEffect(() => {
+    // Safety Timeout: If Firebase doesn't respond in 7 seconds, stop the loading skeletons
+    const timeout = setTimeout(() => {
+      setLoadingPonds(false);
+    }, 7000);
+
     const pondsRef = ref(database, "ponds");
     const unsubscribe = onValue(pondsRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        setPonds([]);
+      clearTimeout(timeout);
+      try {
+        const data = snapshot.val();
+        if (!data) {
+          setPonds([]);
+          setLoadingPonds(false);
+          return;
+        }
+
+        setPonds((previousPonds) => {
+          const previousCurrentMap = new Map(previousPonds.map((pond) => [pond.id, pond.current]));
+
+          const nextPonds = Object.keys(data).map((key) => {
+            const pond = data[key];
+            if (!pond || typeof pond !== "object") return null;
+            
+            const current = (pond.current || {}) as PondCurrent;
+            const history = pond.history?.readings
+              ? (Object.values(pond.history.readings) as Array<Record<string, unknown>>)
+                  .filter(item => item && typeof item === "object")
+                  .sort((a, b) => new Date(String(a.time)).getTime() - new Date(String(b.time)).getTime())
+                  .slice(-20)
+              : [];
+
+            return {
+              id: key,
+              current,
+              previousCurrent: previousCurrentMap.get(key) || getPreviousReadingFromHistory(history),
+              ai: (pond.ai_result?.current || {}) as PondAI,
+              history: history as Record<string, unknown>[],
+              score: calculateHealthScore(current),
+            } as DashboardPondData;
+          }).filter((p): p is DashboardPondData => p !== null);
+
+          return nextPonds.slice(0, pondCount);
+        });
         setLoadingPonds(false);
-        return;
+      } catch (err) {
+        console.error("Dashboard Ponds Error:", err);
+        setLoadingPonds(false);
       }
-
-      setPonds((previousPonds) => {
-        const previousCurrentMap = new Map(previousPonds.map((pond) => [pond.id, pond.current]));
-
-        return Object.keys(data).map((key) => {
-          const pond = data[key];
-          const current = (pond.current || {}) as PondCurrent;
-          const history = pond.history?.readings
-            ? (Object.values(pond.history.readings) as Array<Record<string, unknown>>)
-                .sort((a, b) => new Date(String(a.time)).getTime() - new Date(String(b.time)).getTime())
-                .slice(-20)
-            : [];
-
-          return {
-            id: key,
-            current,
-            previousCurrent: previousCurrentMap.get(key) || getPreviousReadingFromHistory(history),
-            ai: (pond.ai_result?.current || {}) as PondAI,
-            history,
-            score: calculateHealthScore(current),
-          };
-        }).slice(0, pondCount);
-      });
+    }, (error) => {
+      console.error("Firebase Auth/Permission Error:", error);
       setLoadingPonds(false);
     });
 
-    return () => unsubscribe();
+    return () => {
+        unsubscribe();
+        clearTimeout(timeout);
+    };
   }, [pondCount]);
 
   useEffect(() => {

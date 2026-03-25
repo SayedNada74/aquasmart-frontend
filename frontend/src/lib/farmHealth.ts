@@ -20,7 +20,7 @@ export function calculateHealthScore(readings: WaterReadings): number {
     else if (readings.DO < 5) score -= 10;
   }
 
-  if (typeof readings.Temperature === "number" && (readings.Temperature > 32 || readings.Temperature < 22)) {
+  if (typeof readings.Temperature === "number" && (readings.Temperature > 32 || readings.Temperature < 24)) {
     score -= 15;
   }
 
