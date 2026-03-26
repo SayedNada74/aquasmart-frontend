@@ -17,15 +17,30 @@ interface LiveDataIndicatorProps {
 export function LiveDataIndicator({
   path,
   className = "",
-  staleAfterMs = 35000,
-  lostAfterMs = 70000,
+  staleAfterMs = 90000,
+  lostAfterMs = 180000,
 }: LiveDataIndicatorProps) {
   const { t, lang } = useApp();
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
+  const [debouncedIsConnected, setDebouncedIsConnected] = useState(false);
   const [hasReceivedSnapshot, setHasReceivedSnapshot] = useState(false);
   const [lastUpdateAt, setLastUpdateAt] = useState<number | null>(null);
   const [now, setNow] = useState(Date.now());
   const [hasListenerError, setHasListenerError] = useState(false);
+
+  // Debounce the connection state to prevent flickering (especially when throttled)
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isFirebaseConnected) {
+      setDebouncedIsConnected(true);
+    } else {
+      // Wait 3 seconds before saying "Lost" if we were connected before
+      timer = setTimeout(() => {
+        setDebouncedIsConnected(false);
+      }, 3000);
+    }
+    return () => clearTimeout(timer);
+  }, [isFirebaseConnected]);
 
   useEffect(() => {
     setHasReceivedSnapshot(false);
@@ -68,23 +83,28 @@ export function LiveDataIndicator({
   }, []);
 
   const status = useMemo<LiveState>(() => {
-    if (hasListenerError || (!isFirebaseConnected && hasReceivedSnapshot)) {
+    // If we have an explicit error or we lost connection for > 3 seconds
+    if (hasListenerError || (!debouncedIsConnected && hasReceivedSnapshot)) {
       return "lost";
     }
 
+    // Still waiting for first data
     if (!hasReceivedSnapshot || lastUpdateAt === null) {
-      return isFirebaseConnected ? "syncing" : "lost";
+      return debouncedIsConnected ? "syncing" : "lost";
     }
 
     const age = now - lastUpdateAt;
-    if (!isFirebaseConnected || age > lostAfterMs) {
+    // CONNECTION LOST: Either explicit offline flag (debounced) or we missed pulses for too long
+    if (!debouncedIsConnected || age > lostAfterMs) {
       return "lost";
     }
+    // SYNCING: Pulse is late but connection is technically still up
     if (age > staleAfterMs) {
       return "syncing";
     }
+    // CONNECTED: Happy path!
     return "connected";
-  }, [hasListenerError, hasReceivedSnapshot, isFirebaseConnected, lastUpdateAt, lostAfterMs, now, staleAfterMs]);
+  }, [hasListenerError, debouncedIsConnected, hasReceivedSnapshot, lastUpdateAt, now, lostAfterMs, staleAfterMs]);
 
   const relativeTimeLabel = useMemo(() => {
     if (!hasReceivedSnapshot || lastUpdateAt === null) {
