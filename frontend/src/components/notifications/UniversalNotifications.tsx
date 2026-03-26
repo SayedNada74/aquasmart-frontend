@@ -7,6 +7,7 @@ import { ref, onValue, set, push } from "firebase/database";
 import { useApp } from "@/lib/AppContext";
 import { AnimatePresence } from "framer-motion";
 import { SmartAlertToast } from "@/components/notifications/SmartAlertToast";
+import { getPondIssueDetails } from "@/lib/pondIssue";
 
 interface GlobalAlert {
   id: string;
@@ -44,15 +45,18 @@ export function UniversalNotifications() {
 
         if (status.includes("Danger") || status.includes("Warning")) {
           const type = status.includes("Danger") ? "danger" : "warning";
-          const alertKey = `${pondId}_${status}_${ai.Reason?.substring(0, 24)}`;
+          const issue = getPondIssueDetails(pond.current, ai);
+          
+          // Use the English reason from issue details mapped directly from numbers for a reliable unique key
+          const alertKey = `${pondId}_${type}_${issue.reasonEn.substring(0, 30)}`;
 
           if (!notifiedRef.current.has(alertKey)) {
             const alert: GlobalAlert = {
               id: `${pondId}_${Date.now()}`,
               pondId,
               type,
-              message_ar: ai.Reason || (type === "danger" ? "خطر حرج يحتاج تدخلًا سريعًا." : "يوجد تحذير يحتاج متابعة."),
-              message_en: ai.Reason || (type === "danger" ? "A critical issue requires immediate attention." : "A warning condition needs monitoring."),
+              message_ar: issue.reasonAr,
+              message_en: issue.reasonEn,
               timestamp: Date.now(),
               metrics: pond.current
                 ? {
