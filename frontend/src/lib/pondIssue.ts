@@ -24,93 +24,93 @@ export function getPondIssueDetails(
   const ph = current?.PH;
   const temperature = current?.Temperature;
   const aiStatus = ai?.Status || "";
-  const aiReason = ai?.Reason?.trim();
+  
+  let severity: PondSeverity = "safe";
+  let causesDanger = false;
+  
+  // Exact Scientific Thresholds for Danger
+  if (typeof ammonia === "number" && ammonia > 0.8) causesDanger = true;
+  if (typeof DO === "number" && DO < 4.2) causesDanger = true;
+  if (typeof temperature === "number" && (temperature < 23.5 || temperature > 33.0)) causesDanger = true;
+  if (typeof ph === "number" && (ph < 6.3 || ph > 8.7)) causesDanger = true;
 
-  if (aiStatus.includes("Danger") && aiReason) {
+  if (causesDanger || aiStatus.includes("Danger")) severity = "danger";
+  else if (aiStatus.includes("Warning")) severity = "warning";
+
+  if (severity === "safe") {
     return {
-      severity: "danger",
-      reasonAr: aiReason,
-      reasonEn: aiReason,
-      recommendationAr: `يوجد خطر في هذا الحوض: ${aiReason}`,
-      recommendationEn: `There is a critical issue in this pond: ${aiReason}`,
+      severity: "safe",
+      reasonAr: "جميع القراءات الحالية في المنطقة الآمنة.",
+      reasonEn: "All current readings are within the safe zone.",
+      recommendationAr: "ظروف المياه ممتازة في هذا الحوض. استمر في المراقبة الروتينية.",
+      recommendationEn: "Water conditions are excellent. Continue routine monitoring.",
     };
   }
 
+  // Compound Reasons Builder
+  const reasonsAr: string[] = [];
+  const reasonsEn: string[] = [];
+  const recsAr: string[] = [];
+  const recsEn: string[] = [];
+
+  // 1. NH3 
   if (typeof ammonia === "number" && ammonia > 0.8) {
-    return {
-      severity: "danger",
-      reasonAr: "ارتفاع الأمونيا إلى مستوى خطر يحتاج تدخلًا فوريًا.",
-      reasonEn: "Ammonia has reached a dangerous level and needs immediate intervention.",
-      recommendationAr: "مستوى الأمونيا مرتفع في هذا الحوض. يُفضل تدخل فوري لتحسين جودة المياه.",
-      recommendationEn: "Ammonia levels are elevated in this pond. Water quality intervention is recommended immediately.",
-    };
+    reasonsAr.push("الأمونيا تسبب تسمم فوري للدم وتضرب الخياشيم");
+    reasonsEn.push("Ammonia causes immediate blood poisoning and gill damage");
+    recsAr.push("تغيير جزء من المياه فوراً لوقف التسمم");
+    recsEn.push("perform an immediate partial water change");
+  } else if (typeof ammonia === "number" && ammonia > 0.5 && severity === "warning") {
+    reasonsAr.push("الأمونيا بدأت في الارتفاع عن الحد المثالي");
+    reasonsEn.push("Ammonia is starting to rise above ideal levels");
+    recsAr.push("وقف التغذية ومراقبة جودة المياه");
+    recsEn.push("stop feeding and monitor water quality");
   }
 
+  // 2. DO
   if (typeof DO === "number" && DO < 4.2) {
-    return {
-      severity: "danger",
-      reasonAr: "الأكسجين المذاب منخفض جدًا عن الحد الآمن.",
-      reasonEn: "Dissolved oxygen is critically below the safe limit.",
-      recommendationAr: "الأكسجين المذاب منخفض في هذا الحوض. فكر في تشغيل البدالات فورًا.",
-      recommendationEn: "Low dissolved oxygen detected in this pond. Consider activating the aerators immediately.",
-    };
+    reasonsAr.push("نقص الأكسجين يجعل السمك يختنق ويطلع على سطح المياه");
+    reasonsEn.push("Low oxygen causes fish to suffocate and surface");
+    recsAr.push("تشغيل جميع البدالات والتهوية بأقصى طاقة فوراً");
+    recsEn.push("activate all aerators at maximum capacity immediately");
+  } else if (typeof DO === "number" && DO < 5.0 && severity === "warning") {
+    reasonsAr.push("الأكسجين أقل من المستوى التشغيلي المثالي");
+    reasonsEn.push("Oxygen is below the ideal operating level");
+    recsAr.push("زيادة مستوى التهوية تدريجياً");
+    recsEn.push("increase aeration levels gradually");
   }
 
-  if (aiStatus.includes("Warning") && aiReason) {
-    return {
-      severity: "warning",
-      reasonAr: aiReason,
-      reasonEn: aiReason,
-      recommendationAr: `يوجد تحذير يحتاج متابعة: ${aiReason}`,
-      recommendationEn: `A warning condition needs attention: ${aiReason}`,
-    };
+  // 3. Temp
+  if (typeof temperature === "number" && (temperature < 23.5 || temperature > 33.0)) {
+    reasonsAr.push("درجة الحرارة تُجهد السمك حرارياً وتقلل مناعته");
+    reasonsEn.push("Temperature causes extreme thermal stress and reduces immunity");
+    recsAr.push("تعديل مستوى المياه ومراجعة دورة التبريد أو التدفئة");
+    recsEn.push("adjust water levels and verify thermal circulation");
   }
 
-  if (typeof ammonia === "number" && ammonia > 0.5) {
-    return {
-      severity: "warning",
-      reasonAr: "الأمونيا أعلى من النطاق المثالي لهذا الحوض.",
-      reasonEn: "Ammonia is above the ideal range for this pond.",
-      recommendationAr: "الأمونيا أعلى من المثالي في هذا الحوض. راقب التهوية وجدول تغيير المياه.",
-      recommendationEn: "Ammonia is above the ideal range in this pond. Monitor aeration and the water exchange schedule closely.",
-    };
+  // 4. pH
+  if (typeof ph === "number" && (ph < 6.3 || ph > 8.7)) {
+    reasonsAr.push("الحموضة/القلوية العالية تذيب قشور السمك وتزيد من سمية الأرقام الأخرى");
+    reasonsEn.push("pH imbalance dissolves fish scales and magnifies toxicity of other parameters");
+    recsAr.push("استخدام محسنات لوزن درجة حموضة المياه فوراً");
+    recsEn.push("apply amendments to balance water pH immediately");
   }
 
-  if (typeof DO === "number" && DO < 5) {
-    return {
-      severity: "warning",
-      reasonAr: "الأكسجين المذاب أقل من المستوى المستهدف.",
-      reasonEn: "Dissolved oxygen is below the target operating level.",
-      recommendationAr: "مستوى الأكسجين أقل من المثالي لهذا الحوض. متابعة التهوية موصى بها.",
-      recommendationEn: "Dissolved oxygen is below the ideal target for this pond. Aeration should be monitored closely.",
-    };
+  if (reasonsAr.length === 0) {
+    const fallbackReason = ai?.Reason || "مؤشرات غير مستقرة عامة";
+    reasonsAr.push(fallbackReason);
+    reasonsEn.push(ai?.Reason || "Unstable general indicators");
+    recsAr.push("إرسال فني لأخذ عينات يدوية من المزارع");
+    recsEn.push("dispatch a technician for manual farm sampling");
   }
 
-  if (typeof ph === "number" && (ph < 6.5 || ph > 8.5)) {
-    return {
-      severity: "warning",
-      reasonAr: "درجة الحموضة خارج النطاق المناسب لنمو الأسماك.",
-      reasonEn: "pH is outside the suitable range for fish growth.",
-      recommendationAr: "قيمة الحموضة خارج النطاق المثالي في هذا الحوض. راقب توازن المياه خلال الدورة القادمة.",
-      recommendationEn: "The pH level is outside the optimal range in this pond. Monitor water balance during the next cycle.",
-    };
-  }
-
-  if (typeof temperature === "number" && (temperature < 22 || temperature > 32)) {
-    return {
-      severity: "warning",
-      reasonAr: "درجة حرارة المياه غير مستقرة لهذا الحوض.",
-      reasonEn: "Water temperature is outside the stable operating range.",
-      recommendationAr: "درجة حرارة المياه غير مثالية في هذا الحوض. راقب الحمل الحيوي والتهوية.",
-      recommendationEn: "Water temperature is outside the ideal range in this pond. Monitor biological load and aeration.",
-    };
-  }
+  const joinAr = (arr: string[]) => arr.join("، و");
+  const joinEn = (arr: string[]) => arr.join(" and ");
 
   return {
-    severity: "safe",
-    reasonAr: "جميع القراءات الحالية ضمن الحدود الطبيعية.",
-    reasonEn: "All current readings are within the normal operating range.",
-    recommendationAr: "ظروف المياه مستقرة في هذا الحوض. لا يوجد إجراء فوري مطلوب.",
-    recommendationEn: "Water conditions are stable in this pond. No immediate action is required.",
+    severity,
+    reasonAr: `${joinAr(reasonsAr)}.`,
+    reasonEn: `${joinEn(reasonsEn)}.`,
+    recommendationAr: `المقترح: ${joinAr(recsAr)}.`,
+    recommendationEn: `Action: ${joinEn(recsEn)}.`,
   };
 }

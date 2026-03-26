@@ -56,17 +56,13 @@ const fishTypes = [
 
 function calcWaterQuality(c: { Temperature: number; PH: number; Ammonia: number; DO: number }): number {
   let score = 100;
-  if (c.Temperature < 24 || c.Temperature > 32) score -= 20;
-  else if (c.Temperature < 25 || c.Temperature > 30) score -= 5;
-  if (c.PH < 6.5 || c.PH > 8.5) score -= 25;
-  else if (c.PH < 7.0 || c.PH > 8.0) score -= 5;
+  if (c.Temperature < 23.5 || c.Temperature > 33.0) score -= 25;
+  if (c.PH < 6.3 || c.PH > 8.7) score -= 25;
   if (c.Ammonia > 0.8) score -= 30;
   else if (c.Ammonia > 0.5) score -= 15;
-  else if (c.Ammonia > 0.3) score -= 5;
   if (c.DO < 4.2) score -= 30;
   else if (c.DO < 5.0) score -= 15;
-  else if (c.DO < 6.0) score -= 5;
-  return Math.max(0, Math.min(100, score));
+  return Math.max(0, Math.min(100, Math.round(score)));
 }
 
 export default function PondsPage() {

@@ -189,7 +189,7 @@ export default function DashboardPage() {
           color: "#f59e0b",
           key: "T",
           status:
-            typeof active.current.Temperature === "number" && active.current.Temperature >= 22 && active.current.Temperature <= 32
+            typeof active.current.Temperature === "number" && active.current.Temperature >= 23.5 && active.current.Temperature <= 33.0
               ? t("مستقر", "Stable")
               : t("يحتاج مراجعة", "Needs review"),
         },
@@ -205,7 +205,7 @@ export default function DashboardPage() {
           color: "#3b82f6",
           key: "pH",
           status:
-            typeof active.current.PH === "number" && active.current.PH >= 6.5 && active.current.PH <= 8.5
+            typeof active.current.PH === "number" && active.current.PH >= 6.3 && active.current.PH <= 8.7
               ? t("نطاق مثالي", "Optimal Range")
               : t("خارج النطاق", "Out of range"),
         },
@@ -221,7 +221,7 @@ export default function DashboardPage() {
           color: "#ef4444",
           key: "NH3",
           status:
-            typeof active.current.Ammonia === "number" && active.current.Ammonia <= 0.5
+            typeof active.current.Ammonia === "number" && active.current.Ammonia <= 0.8
               ? t("نسبة آمنة", "Safe Level")
               : t("تحتاج تدخل", "Needs action"),
         },
@@ -237,7 +237,7 @@ export default function DashboardPage() {
           color: "#14b8a6",
           key: "DO",
           status:
-            typeof active.current.DO === "number" && active.current.DO >= 5
+            typeof active.current.DO === "number" && active.current.DO >= 4.2
               ? t("كافي", "Sufficient")
               : t("منخفض", "Low"),
         },
