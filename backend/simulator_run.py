@@ -8,7 +8,7 @@ from simulators.sensor_simulator import SensorSimulator
 # --- Configuration ---
 FIREBASE_URL = os.getenv("FIREBASE_URL", "https://aquasmart-system-default-rtdb.firebaseio.com")
 PONDS = os.getenv("PONDS", "pond_1,pond_2,pond_3").split(",")
-INTERVAL = int(os.getenv("SIMULATOR_INTERVAL_SECONDS", 5))
+INTERVAL = int(os.getenv("SIMULATOR_INTERVAL_SECONDS", 30))
 
 # --- Firebase Init ---
 try:
