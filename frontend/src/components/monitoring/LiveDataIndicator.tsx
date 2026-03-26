@@ -17,8 +17,8 @@ interface LiveDataIndicatorProps {
 export function LiveDataIndicator({
   path,
   className = "",
-  staleAfterMs = 5000,
-  lostAfterMs = 15000,
+  staleAfterMs = 35000,
+  lostAfterMs = 70000,
 }: LiveDataIndicatorProps) {
   const { t, lang } = useApp();
   const [isFirebaseConnected, setIsFirebaseConnected] = useState(false);
