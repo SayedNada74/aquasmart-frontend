@@ -21,6 +21,43 @@ NH3_MAX = 0.5
 alert_sent_early = {}
 alert_sent_critical = {}
 
+def send_expo_push_notification(title, body):
+    """Fetch all user push tokens from Firebase and broadcast an Expo Push Notification."""
+    try:
+        # 1. Get all users
+        resp = requests.get(f"{FIREBASE_URL}/users.json", timeout=5)
+        users_data = resp.json()
+        if not users_data:
+            return
+
+        # 2. Extract tokens
+        tokens = []
+        for uid, user_info in users_data.items():
+            token = user_info.get("expoPushToken")
+            if token and type(token) == str and token.startswith("ExponentPushToken"):
+                tokens.append(token)
+
+        if not tokens:
+            return
+
+        # 3. Send to Expo Server
+        message_chunks = []
+        for token in tokens:
+            message_chunks.append({
+                "to": token,
+                "sound": "default",
+                "title": title,
+                "body": body,
+                "channelId": "aquasmart-alerts" # Used for Android MAX importance
+            })
+        
+        expo_url = "https://exp.host/--/api/v2/push/send"
+        requests.post(expo_url, json=message_chunks, headers={"Content-Type": "application/json"}, timeout=10)
+        print(f"📩 Broadcased push notification to {len(tokens)} devices.")
+    except Exception as e:
+        print("Push Notification Error:", e)
+
+    
 def send_telegram_alert(pond_id, message, is_critical=False):
     if not BOT_TOKEN or not CHAT_ID:
         return
@@ -107,6 +144,12 @@ while True:
                     f"⏰ **Time:** {time.strftime('%H:%M:%S')}"
                 )
                 send_telegram_alert(pond_id, telegram_msg, True)
+                
+                # إرسال إشعار للموبايلات وهو مقفول
+                clean_reason_for_push = reason.replace("Critical: ", "")
+                push_body = f"High Danger in {POND_DISPLAY[pond_id]}! {clean_reason_for_push}"
+                send_expo_push_notification("🔴 AquaSmart Alert", push_body)
+
             else:
                 if prediction >= 0.75:
                     status_display = "Safe ✅"
