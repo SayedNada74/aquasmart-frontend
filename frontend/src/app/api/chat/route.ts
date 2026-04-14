@@ -25,8 +25,8 @@ export async function POST(req: Request) {
 
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ 
-            model: "gemini-1.5-flash",
+        const model = genAI.getGenerativeModel({
+            model: "gemini-2.5-flash",
             systemInstruction: `
 إنت "AquaAI" - الخبير الرقمي الأول والاستشاري التقني المتخصص لمنصة "AquaSmart AI" في مصر. 
 شخصيتك: محترف جداً، حازم في الأمور العلمية، بشوش في التواصل، وخبير في تكنولوجيا الـ IoT والاستزراع السمكي. لغتك هي اللهجة المصرية العامية الراقية الممزوجة بمصطلحات علمية دقيقة.
