@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     try {
         const { imageBase64, mimeType } = await req.json();
-        const apiKey = process.env.GEMINI_API_KEY || "AIzaSyB3CkYCzS3-XtQ5Cqin2LmRIHk9aWukSJw";
+        const apiKey = process.env.GEMINI_API_KEY || "";
 
         if (!imageBase64 || !mimeType) {
             return NextResponse.json({ error: "Missing image data" }, { status: 400 });
@@ -54,6 +54,7 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ reply: text });
     } catch (error) {
+        console.error("Gemini Vision API Error:", error);
         return NextResponse.json(
             { reply: "عذراً، حدث خطأ في تحليل الصورة. يرجى التأكد من جودة الصورة أو محاولة صورة أخرى." },
             { status: 200 }
