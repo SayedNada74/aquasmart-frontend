@@ -11,7 +11,7 @@ export async function POST(req: Request) {
 
     try {
         const { imageBase64, mimeType } = await req.json();
-        const apiKey = process.env.GEMINI_API_KEY || "";
+        const apiKey = process.env.GEMINI_API_KEY || "AIzaSyB3CkYCzS3-XtQ5Cqin2LmRIHk9aWukSJw";
 
         if (!imageBase64 || !mimeType) {
             return NextResponse.json({ error: "Missing image data" }, { status: 400 });
@@ -24,7 +24,7 @@ export async function POST(req: Request) {
         }
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
         const systemPrompt = `
 إنت "AquaAI" - الخبير الرقمي المتخصص في تشخيص أمراض الأسماك وتحليل بيئات المزارع السمكية.
@@ -54,7 +54,6 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ reply: text });
     } catch (error) {
-        console.error("Gemini Vision API Error:", error);
         return NextResponse.json(
             { reply: "عذراً، حدث خطأ في تحليل الصورة. يرجى التأكد من جودة الصورة أو محاولة صورة أخرى." },
             { status: 200 }
