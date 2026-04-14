@@ -25,8 +25,8 @@ export async function POST(req: Request) {
 
 
         const genAI = new GoogleGenerativeAI(apiKey);
-        // Using gemini-1.5-flash based on stability and speed
-        const modelName = "gemini-1.5-flash";
+        // Using gemini-1.5-flash-latest for stability and speed
+        const modelName = "gemini-1.5-flash-latest";
         const model = genAI.getGenerativeModel({ model: modelName });
 
 
