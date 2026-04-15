@@ -14,7 +14,7 @@ import { TwoFactorModal } from "@/components/settings/TwoFactorModal";
 import { useSectionSearchFocus } from "@/hooks/useSectionSearchFocus";
 
 export default function SettingsPage() {
-    const { t, lang, setUserName, lowPowerMode, setLowPowerMode, dir, pondCount, setPondCount } = useApp();
+    const { t, lang, userName, setUserName, lowPowerMode, setLowPowerMode, dir, pondCount, setPondCount, userPhotoUrl, setUserPhotoUrl } = useApp();
     const router = useRouter();
     const searchParams = useSearchParams();
     const { profile: authProfile, refreshUser, user: firebaseUser, loading: authLoading } = useAuth();
@@ -69,9 +69,11 @@ export default function SettingsPage() {
                 setTwoFactorEnabled(!!authProfile.settings.security.twoFactorEnabled);
             }
 
-            setUserName(authProfile.fullName);
+            if (authProfile.fullName && authProfile.fullName !== userName) {
+                setUserName(authProfile.fullName);
+            }
         }
-    }, [authProfile, setUserName]);
+    }, [authProfile, setUserName, userName]);
 
     const handleSave = async () => {
         if (!firebaseUser) return;
@@ -133,6 +135,22 @@ export default function SettingsPage() {
         setProfile(p => ({ ...p, fishTypes: p.fishTypes.filter(t => t !== type) }));
     };
 
+    const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            // Check file size (e.g. limit to 1MB because it's saved in RTDB as Base64)
+            if (file.size > 1024 * 1024) {
+               alert(t("حجم الصورة كبير جداً، يرجى اختيار صورة أقل من 1 ميجابايت", "Image is too large, please select an image under 1MB"));
+               return;
+            }
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                setUserPhotoUrl(reader.result as string);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
     return (
         <PageTransition>
             <div className={`max-w-5xl mx-auto space-y-6 pb-8 ${dir === 'rtl' ? 'font-arabic' : ''}`} dir={dir}>
@@ -181,13 +199,19 @@ export default function SettingsPage() {
                                 <span className="text-[10px] px-2 py-0.5 rounded-full bg-[#3b82f6]/15 text-[#3b82f6] font-bold">{t("مسؤول النظام", "Admin")}</span>
                             </div>
                         </div>
-                        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center overflow-hidden border-2 border-[var(--color-border)]">
-                            {firebaseUser?.photoURL ? (
-                                <img src={firebaseUser.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                            ) : (
-                                <User className="w-8 h-8 text-white" />
-                            )}
+                        <div className="relative group cursor-pointer" onClick={() => document.getElementById("profileImageInput")?.click()}>
+                            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center overflow-hidden border-2 border-[var(--color-border)] relative">
+                                {userPhotoUrl ? (
+                                    <img src={userPhotoUrl} alt="Profile" className="w-full h-full object-cover" />
+                                ) : (
+                                    <User className="w-8 h-8 text-white" />
+                                )}
+                                <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-[10px] font-bold text-white z-10">
+                                    {t("تغيير", "Change")}
+                                </div>
+                            </div>
                         </div>
+                        <input id="profileImageInput" type="file" accept="image/*" className="hidden" onChange={handleImageUpload} />
                     </div>
                 </div>
 

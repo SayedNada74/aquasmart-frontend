@@ -1,8 +1,9 @@
 "use client";
 
-import React, { createContext, useContext, useState, useEffect } from "react";
-import { auth } from "@/lib/firebase";
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
+import { auth, database } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
+import { ref, get, update } from "firebase/database";
 
 type Language = "ar" | "en";
 type Theme = "dark" | "light";
@@ -24,6 +25,8 @@ interface AppContextType {
     setLowPowerMode: (mode: boolean) => void;
     pondCount: number;
     setPondCount: (count: number) => void;
+    userPhotoUrl: string | null;
+    setUserPhotoUrl: (url: string | null) => void;
 }
 
 const AppContext = createContext<AppContextType>({
@@ -43,6 +46,8 @@ const AppContext = createContext<AppContextType>({
     setLowPowerMode: () => { },
     pondCount: 3,
     setPondCount: () => { },
+    userPhotoUrl: null,
+    setUserPhotoUrl: () => { },
 });
 
 export function AppProvider({ children }: { children: React.ReactNode }) {
@@ -54,6 +59,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [lowPowerMode, setLowPowerModeState] = useState(false);
     const [pondCount, setPondCountState] = useState(3);
+    const [userPhotoUrl, setUserPhotoUrlState] = useState<string | null>(null);
     const userRole = lang === "ar" ? "مدير المزرعة" : "Farm Manager";
 
     // Load persisted settings on mount
@@ -71,53 +77,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         if (savedPonds) setPondCountState(parseInt(savedPonds));
     }, []);
 
-    const setLang = async (l: Language) => {
+    const setLang = useCallback(async (l: Language) => {
         setLangState(l);
         localStorage.setItem("aquasmart_lang", l);
         if (firebaseUser) {
             try {
-                const { ref, update } = await import("firebase/database");
-                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/display`), { lang: l });
             } catch (err) { console.error("Error syncing lang:", err); }
         }
-    };
+    }, [firebaseUser]);
 
-    const setTheme = async (t: Theme) => {
+    const setTheme = useCallback(async (t: Theme) => {
         setThemeState(t);
         localStorage.setItem("aquasmart_theme", t);
         if (firebaseUser) {
             try {
-                const { ref, update } = await import("firebase/database");
-                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/display`), { theme: t });
             } catch (err) { console.error("Error syncing theme:", err); }
         }
-    };
+    }, [firebaseUser]);
 
-    const setLowPowerMode = async (mode: boolean) => {
+    const setLowPowerMode = useCallback(async (mode: boolean) => {
         setLowPowerModeState(mode);
         localStorage.setItem("aquasmart_power", mode ? "true" : "false");
         if (firebaseUser) {
             try {
-                const { ref, update } = await import("firebase/database");
-                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/performance`), { lowPowerMode: mode });
             } catch (err) { console.error("Error syncing power mode:", err); }
         }
-    };
+    }, [firebaseUser]);
 
-    const setPondCount = async (count: number) => {
+    const setPondCount = useCallback(async (count: number) => {
         setPondCountState(count);
         localStorage.setItem("aquasmart_pond_count", count.toString());
         if (firebaseUser) {
             try {
-                const { ref, update } = await import("firebase/database");
-                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/farm`), { activePonds: count });
             } catch (err) { console.error("Error syncing pond count:", err); }
         }
-    };
+    }, [firebaseUser]);
 
     // Listen to Firebase auth state
     useEffect(() => {
@@ -129,13 +127,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
                 // Load name and settings from Firebase RTDB
                 try {
-                    const { ref, get } = await import("firebase/database");
-                    const { database } = await import("@/lib/firebase");
                     const userRef = ref(database, `users/${user.uid}`);
                     const snapshot = await get(userRef);
                     if (snapshot.exists()) {
                         const data = snapshot.val();
                         setUserNameState(data.fullName || data.name || user.displayName || user.email || "");
+                        if (data.photoURL || data.profilePic) setUserPhotoUrlState(data.photoURL || data.profilePic);
+                        else setUserPhotoUrlState(user.photoURL);
                         
                         // Sync Display Settings
                         if (data.settings?.display?.lang) setLangState(data.settings.display.lang);
@@ -157,24 +155,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
                 setIsLoggedIn(false);
                 setUserNameState("");
                 setUserEmail("");
+                setUserPhotoUrlState(null);
             }
         });
         return () => unsub();
     }, []);
 
-    const setUserName = async (name: string) => {
+    const setUserName = useCallback(async (name: string) => {
         setUserNameState(name);
         if (firebaseUser) {
             try {
-                const { ref, update } = await import("firebase/database");
-                const { database } = await import("@/lib/firebase");
                 const userRef = ref(database, `users/${firebaseUser.uid}`);
                 await update(userRef, { name: name });
             } catch (err) {
                 console.error("Error updating user name:", err);
             }
         }
-    };
+    }, [firebaseUser]);
+
+    const setUserPhotoUrl = useCallback(async (url: string | null) => {
+        setUserPhotoUrlState(url);
+        if (firebaseUser) {
+            try {
+                const userRef = ref(database, `users/${firebaseUser.uid}`);
+                await update(userRef, { photoURL: url });
+            } catch (err) {
+                console.error("Error updating user photo:", err);
+            }
+        }
+    }, [firebaseUser]);
 
     useEffect(() => {
         document.documentElement.dir = lang === "ar" ? "rtl" : "ltr";
@@ -190,11 +199,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }
     }, [theme]);
 
-    const t = (ar: string, en: string) => (lang === "ar" ? ar : en);
-    const dir = lang === "ar" ? "rtl" : "ltr";
+    const t = useCallback((ar: string, en: string) => (lang === "ar" ? ar : en), [lang]);
+    const dir = (lang === "ar" ? "rtl" : "ltr") as "rtl" | "ltr";
+
+    const value = useMemo(() => ({
+        lang, setLang, theme, setTheme, t, dir, userName, setUserName, userRole, userEmail, firebaseUser, isLoggedIn, lowPowerMode, setLowPowerMode, pondCount, setPondCount, userPhotoUrl, setUserPhotoUrl
+    }), [lang, setLang, theme, setTheme, t, dir, userName, setUserName, userRole, userEmail, firebaseUser, isLoggedIn, lowPowerMode, setLowPowerMode, pondCount, setPondCount, userPhotoUrl, setUserPhotoUrl]);
 
     return (
-        <AppContext.Provider value={{ lang, setLang, theme, setTheme, t, dir, userName, setUserName, userRole, userEmail, firebaseUser, isLoggedIn, lowPowerMode, setLowPowerMode, pondCount, setPondCount }}>
+        <AppContext.Provider value={value}>
             {children}
         </AppContext.Provider>
     );

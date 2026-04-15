@@ -14,7 +14,7 @@ interface HeaderProps {
 export function Header({ onMenuToggle }: HeaderProps) {
   const pathname = usePathname();
   const router = useRouter();
-  const { t, lang, setLang } = useApp();
+  const { t, lang, setLang, userPhotoUrl } = useApp();
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const notifRef = useRef<HTMLDivElement>(null);
@@ -92,7 +92,9 @@ export function Header({ onMenuToggle }: HeaderProps) {
             className="relative w-9 h-9 rounded-lg bg-[var(--color-bg-input)] border border-[var(--color-border)] flex items-center justify-center text-[var(--color-text-muted)] hover:text-[var(--color-cyan)] transition-colors"
           >
             <Bell className="w-4 h-4" />
-            <span className="absolute -top-1 -right-1 w-4 h-4 bg-[#ef4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold">3</span>
+            {notifications.length > 0 && (
+                <span className="absolute -top-1 right-0 min-w-[16px] h-4 bg-[#ef4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold px-1 z-10 shadow-sm border border-[var(--color-bg-card)]">{notifications.length}</span>
+            )}
           </button>
           {showNotif && (
             <div className="absolute left-0 md:right-0 md:left-auto top-12 w-72 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden">
@@ -125,8 +127,12 @@ export function Header({ onMenuToggle }: HeaderProps) {
             }}
             className="flex items-center gap-2"
           >
-            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center">
-              <User className="w-4 h-4 text-white" />
+            <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center overflow-hidden">
+              {userPhotoUrl ? (
+                <img src={userPhotoUrl} alt="User" className="w-full h-full object-cover" />
+              ) : (
+                <User className="w-4 h-4 text-white" />
+              )}
             </div>
             <ChevronDown className="w-3 h-3 text-[var(--color-text-muted)] hidden sm:block" />
           </button>

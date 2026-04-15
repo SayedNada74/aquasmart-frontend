@@ -20,7 +20,7 @@ interface SidebarProps {
 export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     const pathname = usePathname();
     const router = useRouter();
-    const { t, lang, setLang, theme, setTheme, userName, userRole } = useApp();
+    const { t, lang, setLang, theme, setTheme, userName, userRole, userPhotoUrl } = useApp();
 
     if (pathname === "/login" || pathname === "/") return null;
 
@@ -104,8 +104,12 @@ export function Sidebar({ mobileOpen, onClose }: SidebarProps) {
             {/* User */}
             <Link href="/settings" onClick={() => onClose?.()} className="p-3 md:p-4 border-t border-[var(--color-border)] hover:bg-[var(--color-bg-card-hover)] transition-colors block">
                 <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center flex-shrink-0">
-                        <User className="w-4 h-4 text-white" />
+                    <div className="w-8 h-8 md:w-9 md:h-9 rounded-full bg-gradient-to-br from-[var(--color-cyan)] to-[var(--color-teal)] flex items-center justify-center flex-shrink-0 overflow-hidden border border-[var(--color-border)]">
+                        {userPhotoUrl ? (
+                            <img src={userPhotoUrl} alt="User" className="w-full h-full object-cover" />
+                        ) : (
+                            <User className="w-4 h-4 text-white" />
+                        )}
                     </div>
                     <div className={lang === "ar" ? "text-right" : "text-left"}>
                         <p className="text-sm font-semibold text-[var(--color-text-primary)]">{userName}</p>
