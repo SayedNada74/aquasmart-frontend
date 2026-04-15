@@ -34,17 +34,63 @@ export function Header({ onMenuToggle }: HeaderProps) {
     "/settings": t("الإعدادات", "Settings"),
   };
 
+  const [notifications, setNotifications] = useState<any[]>([]);
+
+  useEffect(() => {
+    let unsub: any;
+    const loadNotifs = async () => {
+      try {
+        const { ref, onValue } = await import("firebase/database");
+        const { database } = await import("@/lib/firebase");
+
+        const historyRef = ref(database, "alerts_history");
+        unsub = onValue(historyRef, (snap) => {
+          const data = snap.val();
+          if (!data) {
+            setNotifications([]);
+            return;
+          }
+          const notifs = Object.entries(data)
+            .map(([id, val]: any) => ({
+              id,
+              ...val,
+              text: lang === "ar" ? `${val?.title_ar || "تنبيه"}: ${val?.desc_ar || ""}` : `${val?.title_en || "Alert"}: ${val?.desc_en || ""}`,
+              type: val.type || "info",
+              time: new Date(val.timestamp || Date.now()).toLocaleTimeString(lang === "ar" ? "ar-EG" : "en-US", { hour: "2-digit", minute: "2-digit" })
+            }))
+            .filter((n) => n.read === false)
+            .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+          setNotifications(notifs.slice(0, 5));
+        });
+      } catch (err) {
+        console.error("Error config notifs:", err);
+      }
+    };
+
+    loadNotifs();
+
+    return () => {
+      if (typeof unsub === "function") unsub();
+    };
+  }, [lang]);
+
+  const markAsRead = async (id: string) => {
+    if (!id) return;
+    try {
+      const { ref, update } = await import("firebase/database");
+      const { database } = await import("@/lib/firebase");
+      await update(ref(database, `alerts_history/${id}`), { read: true });
+    } catch (e) {
+      console.error("Error marking read", e);
+    }
+  };
+
   useEffect(() => {
     if (pageNames[pathname]) {
       document.title = `${pageNames[pathname]} | AquaSmart AI`;
     }
   }, [pathname, lang]);
-
-  const notifications = [
-    { text: t("ارتفاع الأمونيا في الحوض 2", "High NH3 in Pond 2"), type: "danger", time: t("منذ 5 دقائق", "5 min ago") },
-    { text: t("تقرير يومي جاهز", "Daily report ready"), type: "info", time: t("منذ ساعة", "1 hour ago") },
-    { text: t("تم تشغيل البدالة تلقائيًا", "Aerator activated auto"), type: "success", time: t("منذ ساعتين", "2 hours ago") },
-  ];
 
   useEffect(() => {
     const handler = (e: MouseEvent) => {
@@ -93,16 +139,21 @@ export function Header({ onMenuToggle }: HeaderProps) {
           >
             <Bell className="w-4 h-4" />
             {notifications.length > 0 && (
-                <span className="absolute -top-1 right-0 min-w-[16px] h-4 bg-[#ef4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold px-1 z-10 shadow-sm border border-[var(--color-bg-card)]">{notifications.length}</span>
+              <span className="absolute -top-1 right-0 min-w-[16px] h-4 bg-[#ef4444] rounded-full text-[9px] text-white flex items-center justify-center font-bold px-1 z-10 shadow-sm border border-[var(--color-bg-card)]">{notifications.length}</span>
             )}
           </button>
           {showNotif && (
-            <div className="absolute left-0 md:right-0 md:left-auto top-12 w-72 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className={`absolute top-12 w-72 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden ${lang === "ar" ? "left-0" : "right-0 md:left-auto"}`}>
               <div className="p-3 border-b border-[var(--color-border)]">
                 <p className="text-sm font-bold text-[var(--color-text-primary)]">{t("الإشعارات", "Notifications")}</p>
               </div>
+              {notifications.length === 0 && (
+                <div className="px-3 py-6 text-center text-xs text-[var(--color-text-muted)]">
+                  {t("لا توجد إشعارات جديدة", "No new notifications")}
+                </div>
+              )}
               {notifications.map((n, i) => (
-                <div key={i} className="px-3 py-2.5 border-b border-[var(--color-border)]/50 hover:bg-[var(--color-bg-card-hover)] cursor-pointer">
+                <div key={n.id || i} onClick={() => markAsRead(n.id)} className="px-3 py-2.5 border-b border-[var(--color-border)]/50 hover:bg-[var(--color-bg-card-hover)] cursor-pointer transition-colors">
                   <div className="flex items-start gap-2">
                     <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${n.type === "danger" ? "bg-[#ef4444]" : n.type === "info" ? "bg-[#3b82f6]" : "bg-[#10b981]"}`} />
                     <div>
@@ -137,7 +188,7 @@ export function Header({ onMenuToggle }: HeaderProps) {
             <ChevronDown className="w-3 h-3 text-[var(--color-text-muted)] hidden sm:block" />
           </button>
           {showProfile && (
-            <div className="absolute left-0 md:right-0 md:left-auto top-12 w-48 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden">
+            <div className={`absolute top-12 w-48 bg-[var(--color-bg-card)] border border-[var(--color-border)] rounded-xl shadow-xl z-50 overflow-hidden ${lang === "ar" ? "left-0" : "right-0 md:left-auto"}`}>
               <Link href="/settings" onClick={() => setShowProfile(false)} className="flex items-center gap-3 px-4 py-3 hover:bg-[var(--color-bg-card-hover)] text-sm text-[var(--color-text-primary)]">
                 <Settings className="w-4 h-4 text-[var(--color-text-muted)]" />
                 {t("الإعدادات", "Settings")}

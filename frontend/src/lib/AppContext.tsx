@@ -1,9 +1,8 @@
 "use client";
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from "react";
-import { auth, database } from "@/lib/firebase";
+import { auth } from "@/lib/firebase";
 import { onAuthStateChanged, User as FirebaseUser } from "firebase/auth";
-import { ref, get, update } from "firebase/database";
 
 type Language = "ar" | "en";
 type Theme = "dark" | "light";
@@ -82,6 +81,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("aquasmart_lang", l);
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/display`), { lang: l });
             } catch (err) { console.error("Error syncing lang:", err); }
         }
@@ -92,6 +93,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("aquasmart_theme", t);
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/display`), { theme: t });
             } catch (err) { console.error("Error syncing theme:", err); }
         }
@@ -102,6 +105,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("aquasmart_power", mode ? "true" : "false");
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/performance`), { lowPowerMode: mode });
             } catch (err) { console.error("Error syncing power mode:", err); }
         }
@@ -112,6 +117,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         localStorage.setItem("aquasmart_pond_count", count.toString());
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 await update(ref(database, `users/${firebaseUser.uid}/settings/farm`), { activePonds: count });
             } catch (err) { console.error("Error syncing pond count:", err); }
         }
@@ -127,6 +134,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
                 // Load name and settings from Firebase RTDB
                 try {
+                    const { ref, get } = await import("firebase/database");
+                    const { database } = await import("@/lib/firebase");
                     const userRef = ref(database, `users/${user.uid}`);
                     const snapshot = await get(userRef);
                     if (snapshot.exists()) {
@@ -165,6 +174,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUserNameState(name);
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 const userRef = ref(database, `users/${firebaseUser.uid}`);
                 await update(userRef, { name: name });
             } catch (err) {
@@ -177,6 +188,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setUserPhotoUrlState(url);
         if (firebaseUser) {
             try {
+                const { ref, update } = await import("firebase/database");
+                const { database } = await import("@/lib/firebase");
                 const userRef = ref(database, `users/${firebaseUser.uid}`);
                 await update(userRef, { photoURL: url });
             } catch (err) {
