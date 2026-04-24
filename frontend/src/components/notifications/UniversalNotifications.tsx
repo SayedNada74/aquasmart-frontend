@@ -37,6 +37,7 @@ export function UniversalNotifications() {
       if (!data) return;
 
       const newAlerts: GlobalAlert[] = [];
+      const recoveredPonds: string[] = [];
 
       Object.keys(data).forEach((pondId) => {
         const pond = data[pondId];
@@ -84,6 +85,7 @@ export function UniversalNotifications() {
           });
 
           if (recovered) {
+            recoveredPonds.push(pondId);
             const alertKey = `${pondId}_success_recovery`;
             if (!notifiedRef.current.has(alertKey)) {
               const alert: GlobalAlert = {
@@ -111,8 +113,19 @@ export function UniversalNotifications() {
         }
       });
 
-      if (newAlerts.length > 0) {
-        setActiveAlerts((prev) => [...newAlerts.reverse(), ...prev].slice(0, 3));
+      if (newAlerts.length > 0 || recoveredPonds.length > 0) {
+        setActiveAlerts((prev) => {
+          let updatedAlerts = prev;
+          if (recoveredPonds.length > 0) {
+            updatedAlerts = updatedAlerts.filter(
+              (alert) => !(recoveredPonds.includes(alert.pondId) && alert.type !== "success")
+            );
+          }
+          if (newAlerts.length > 0) {
+            return [...newAlerts.reverse(), ...updatedAlerts].slice(0, 3);
+          }
+          return updatedAlerts;
+        });
       }
     });
 
