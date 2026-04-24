@@ -12,7 +12,7 @@ import { getPondIssueDetails } from "@/lib/pondIssue";
 interface GlobalAlert {
   id: string;
   pondId: string;
-  type: "danger" | "warning";
+  type: "danger" | "warning" | "success";
   message_ar: string;
   message_en: string;
   timestamp: number;
@@ -50,6 +50,8 @@ export function UniversalNotifications() {
           // Use the English reason from issue details mapped directly from numbers for a reliable unique key
           const alertKey = `${pondId}_${type}_${issue.reasonEn.substring(0, 30)}`;
 
+          notifiedRef.current.delete(`${pondId}_success_recovery`);
+
           if (!notifiedRef.current.has(alertKey)) {
             const alert: GlobalAlert = {
               id: `${pondId}_${Date.now()}`,
@@ -73,11 +75,39 @@ export function UniversalNotifications() {
             notifiedRef.current.add(alertKey);
           }
         } else if (status.includes("Safe")) {
+          let recovered = false;
           Array.from(notifiedRef.current).forEach((key) => {
-            if (key.startsWith(`${pondId}_`)) {
+            if (key.startsWith(`${pondId}_`) && key !== `${pondId}_success_recovery`) {
               notifiedRef.current.delete(key);
+              recovered = true;
             }
           });
+
+          if (recovered) {
+            const alertKey = `${pondId}_success_recovery`;
+            if (!notifiedRef.current.has(alertKey)) {
+              const alert: GlobalAlert = {
+                id: `${pondId}_${Date.now()}`,
+                pondId,
+                type: "success",
+                message_ar: "عادت قراءات الحوض إلى الوضع الطبيعي الآمن",
+                message_en: "Pond readings have returned to normal safe levels",
+                timestamp: Date.now(),
+                metrics: pond.current
+                  ? {
+                      temp: pond.current.Temperature || 0,
+                      ph: pond.current.PH || 0,
+                      do: pond.current.DO || 0,
+                      nh3: pond.current.Ammonia || 0,
+                    }
+                  : undefined,
+              };
+
+              newAlerts.push(alert);
+              saveToHistory(alert);
+              notifiedRef.current.add(alertKey);
+            }
+          }
         }
       });
 
@@ -96,13 +126,13 @@ export function UniversalNotifications() {
       set(newAlertRef, {
         pondId: alert.pondId,
         type: alert.type,
-        title_ar: alert.type === "danger" ? "تنبيه حرج" : "تحذير",
-        title_en: alert.type === "danger" ? "Critical Alert" : "Warning",
+        title_ar: alert.type === "danger" ? "تنبيه حرج" : alert.type === "warning" ? "تحذير" : "استعادة",
+        title_en: alert.type === "danger" ? "Critical Alert" : alert.type === "warning" ? "Warning" : "Recovery",
         desc_ar: alert.message_ar,
         desc_en: alert.message_en,
         timestamp: alert.timestamp,
         read: false,
-        severity: alert.type === "danger" ? 3 : 2,
+        severity: alert.type === "danger" ? 3 : alert.type === "warning" ? 2 : 1,
         metrics: alert.metrics || null,
       });
     } catch (error) {
